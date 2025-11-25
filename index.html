@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전자결재 시스템 - 토목회사</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 로그인 모달 -->
+    <div id="loginModal" class="modal active">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>로그인</h2>
+            </div>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>ID *</label>
+                    <input type="text" id="loginUsername" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 *</label>
+                    <input type="password" id="loginPassword" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">로그인</button>
+            </form>
+            <div style="margin-top: 15px; text-align: center;">
+                <button type="button" class="btn btn-secondary" onclick="showRegisterModal()" style="width: 100%;">회원가입</button>
+            </div>
+            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 14px;">
+                <strong>안내:</strong><br>
+                회원가입 후 대표님의 승인이 필요합니다.<br>
+                승인된 사용자만 로그인할 수 있습니다.
+            </div>
+        </div>
+    </div>
+
+    <!-- 회원가입 모달 -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>회원가입</h2>
+                <button class="close-btn" onclick="closeRegisterModal()">&times;</button>
+            </div>
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label>ID *</label>
+                    <input type="text" id="registerUsername" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 *</label>
+                    <input type="password" id="registerPassword" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 확인 *</label>
+                    <input type="password" id="registerPasswordConfirm" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>역할 선택 *</label>
+                    <select id="registerRole" required>
+                        <option value="">역할을 선택하세요</option>
+                        <option value="headquarters">본사</option>
+                        <option value="site">현장</option>
+                        <option value="other">기타</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>이름 *</label>
+                    <input type="text" id="registerName" required>
+                </div>
+                <div class="form-group">
+                    <label>연락처</label>
+                    <input type="text" id="registerPhone" placeholder="010-1234-5678" maxlength="13" oninput="formatPhoneNumber(this)">
+                </div>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="registerEmail" placeholder="example@email.com">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">회원가입 신청</button>
+                <button type="button" class="btn btn-secondary" onclick="closeRegisterModal()" style="width: 100%; margin-top: 10px;">취소</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>🏗️ 전자결재 시스템</h1>
+                    <p>현장별 결재 관리 플랫폼</p>
+                </div>
+                <div style="text-align: right;">
+                    <div id="userInfo" style="margin-bottom: 10px;">
+                        <span id="userName" style="font-size: 16px; font-weight: 600;"></span>
+                        <span id="userRole" style="font-size: 14px; opacity: 0.9; margin-left: 10px;"></span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-icon" onclick="showNotificationModal()" style="position: relative; padding: 8px 16px; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; cursor: pointer; font-size: 20px;">
+                            🔔
+                            <span id="notificationBadge" class="notification-badge" style="display: none; position: absolute; top: -5px; right: -5px; background: #ff4757; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold;">0</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="handleLogout()" style="padding: 8px 16px; font-size: 14px;">로그아웃</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav">
+            <button class="nav-btn active" onclick="showSection('dashboard', event)">대시보드</button>
+            <button class="nav-btn" onclick="showSection('sites', event)">현장 관리</button>
+            <button class="nav-btn" onclick="showSection('new-approval', event)">결재 작성</button>
+            <button class="nav-btn" onclick="showSection('approvals', event)">결재 목록</button>
+            <button class="nav-btn" onclick="showSection('pending', event)">대기 중인 결재</button>
+            <button class="nav-btn" onclick="showSection('date-query', event)">날짜별 조회</button>
+            <button class="nav-btn" onclick="showSection('my-info', event)">내 정보</button>
+            <button class="nav-btn" id="userRequestsNavBtn" onclick="showSection('user-requests', event)" style="display: none;">가입 요청</button>
+            <button class="nav-btn" id="backupViewerNavBtn" onclick="showSection('backup-viewer', event)" style="display: none;">백업 조회</button>
+        </div>
+
+        <div class="content">
+            <!-- 대시보드 -->
+            <div id="dashboard" class="section active">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">대시보드</h2>
+                    <button class="btn btn-success" onclick="exportDashboardStats()" style="padding: 10px 20px;">
+                        📊 통계 Excel 내보내기
+                    </button>
+                </div>
+                <div class="stats">
+                    <div class="stat-card" onclick="filterApprovalsByStatus('')" style="cursor: pointer;">
+                        <h3 id="totalApprovals">0</h3>
+                        <p>전체 결재</p>
+                    </div>
+                    <div class="stat-card" onclick="filterApprovalsByStatus('pending')" style="cursor: pointer;">
+                        <h3 id="pendingApprovals">0</h3>
+                        <p>대기 중</p>
+                    </div>
+                    <div class="stat-card" onclick="filterApprovalsByStatus('approved')" style="cursor: pointer;">
+                        <h3 id="approvedCount">0</h3>
+                        <p>승인 완료</p>
+                    </div>
+                    <div class="stat-card" onclick="filterApprovalsByStatus('rejected')" style="cursor: pointer;">
+                        <h3 id="rejectedCount">0</h3>
+                        <p>반려</p>
+                    </div>
+                </div>
+                
+                <!-- 통계 차트 섹션 -->
+                <div style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin-bottom: 15px; font-size: 18px;">월별 결재 통계</h3>
+                        <canvas id="monthlyChart" style="max-height: 300px;"></canvas>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="margin-bottom: 15px; font-size: 18px;">현장별 결재 현황</h3>
+                        <canvas id="siteChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin-bottom: 15px; font-size: 18px;">상태별 통계</h3>
+                    <canvas id="statusChart" style="max-height: 300px;"></canvas>
+                </div>
+                
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">최근 결재 내역</h3>
+                <div class="table-container">
+                    <table id="recentTable">
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>제목</th>
+                                <th>현장</th>
+                                <th>작성자</th>
+                                <th>상태</th>
+                                <th>작성일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 현장 관리 -->
+            <div id="sites" class="section">
+                <h2>현장 관리</h2>
+                <div style="margin-bottom: 20px;" id="addSiteButtonContainer">
+                    <button class="btn btn-primary" onclick="showAddSiteModal()">+ 새 현장 추가</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>현장명</th>
+                                <th>위치</th>
+                                <th>담당자</th>
+                                <th>결재 단계</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sitesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 결재 작성 -->
+            <div id="new-approval" class="section">
+                <h2>새 결재 작성</h2>
+                <form id="approvalForm" onsubmit="submitApproval(event)">
+                    <div class="form-group">
+                        <label>제목 *</label>
+                        <input type="text" id="approvalTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label>현장 선택 *</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="approvalSite" required style="flex: 1;">
+                            </select>
+                            <button type="button" class="btn btn-secondary" onclick="showAddSiteModal()" style="white-space: nowrap; padding: 12px 16px;">
+                                + 새 현장
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>작성자 *</label>
+                        <input type="text" id="approvalAuthor" required>
+                    </div>
+                    <div class="form-group">
+                        <label>내용 *</label>
+                        <textarea id="approvalContent" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>첨부 파일 (PDF)</label>
+                        <input type="file" id="approvalAttachment" accept=".pdf" onchange="handleAttachmentChange(event)">
+                        <small style="color: #666; display: block; margin-top: 5px;">PDF 파일만 업로드 가능합니다. (최대 5MB)</small>
+                        <div id="attachmentInfo" style="margin-top: 5px; color: #28a745; font-size: 14px;"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">결재 제출</button>
+                </form>
+            </div>
+
+            <!-- 결재 목록 -->
+            <div id="approvals" class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">결재 목록</h2>
+                    <button class="btn btn-success" onclick="exportToExcel()" style="padding: 10px 20px;">
+                        📊 Excel 내보내기
+                    </button>
+                </div>
+                <div class="filter-bar">
+                    <input type="text" id="searchInput" placeholder="제목 검색..." onkeyup="filterApprovals()">
+                    <select id="statusFilter" onchange="filterApprovals()">
+                        <option value="">전체 상태</option>
+                        <option value="pending">대기 중</option>
+                        <option value="processing">진행 중</option>
+                        <option value="approved">승인 완료</option>
+                        <option value="rejected">반려</option>
+                    </select>
+                    <select id="siteFilter" onchange="filterApprovals()">
+                        <option value="">전체 현장</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="showAdvancedSearchModal()" style="padding: 10px 20px;">
+                        🔍 고급 검색
+                    </button>
+                    <button class="btn btn-secondary" id="clearAdvancedSearchBtn" onclick="clearAdvancedSearch()" style="padding: 10px 20px; display: none;">
+                        검색 해제
+                    </button>
+                </div>
+                <div id="searchResultInfo" style="margin: 15px 0; padding: 10px; background: #e3f2fd; border-radius: 8px; display: none;">
+                    <span style="font-weight: 600; color: #1976d2;">🔍 고급 검색 결과: </span>
+                    <span id="searchResultCount" style="color: #1976d2;"></span>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>제목</th>
+                                <th>현장</th>
+                                <th>작성자</th>
+                                <th>상태</th>
+                                <th>작성일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvalsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 대기 중인 결재 -->
+            <div id="pending" class="section">
+                <h2>대기 중인 결재</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>제목</th>
+                                <th>현장</th>
+                                <th>작성자</th>
+                                <th>현재 단계</th>
+                                <th>작성일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 날짜별 조회 -->
+            <div id="date-query" class="section">
+                <h2>날짜별 결재 조회</h2>
+                <div style="margin-bottom: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <!-- 커스텀 달력 -->
+                        <div style="flex: 1; min-width: 300px;">
+                            <div class="custom-calendar">
+                                <div class="calendar-header">
+                                    <button class="calendar-nav-btn" onclick="changeMonth(-1)">‹</button>
+                                    <h3 id="calendarMonthYear"></h3>
+                                    <button class="calendar-nav-btn" onclick="changeMonth(1)">›</button>
+                                </div>
+                                <div class="calendar-weekdays">
+                                    <div class="calendar-weekday">일</div>
+                                    <div class="calendar-weekday">월</div>
+                                    <div class="calendar-weekday">화</div>
+                                    <div class="calendar-weekday">수</div>
+                                    <div class="calendar-weekday">목</div>
+                                    <div class="calendar-weekday">금</div>
+                                    <div class="calendar-weekday">토</div>
+                                </div>
+                                <div class="calendar-days" id="calendarDays"></div>
+                            </div>
+                        </div>
+                        <!-- 날짜 선택 및 버튼 -->
+                        <div style="flex: 1; min-width: 250px;">
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label style="font-size: 16px; font-weight: 600; margin-bottom: 10px; display: block;">선택한 날짜</label>
+                                <input type="date" id="dateQueryInput" onchange="loadApprovalsByDate()" style="padding: 10px; font-size: 16px; border: 2px solid #6c5ce7; border-radius: 8px; width: 100%;">
+                            </div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button class="btn btn-primary" onclick="loadTodayApprovals()" style="padding: 10px 20px; flex: 1;">오늘</button>
+                                <button class="btn btn-secondary" onclick="clearDateQuery()" style="padding: 10px 20px; flex: 1;">초기화</button>
+                            </div>
+                            <div id="dateQueryInfo" style="color: #666; font-size: 14px; margin-top: 15px; padding: 10px; background: white; border-radius: 8px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>제목</th>
+                                <th>현장</th>
+                                <th>작성자</th>
+                                <th>상태</th>
+                                <th>작성일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dateQueryTableBody">
+                            <tr>
+                                <td colspan="7" class="empty-state" style="text-align: center; padding: 40px; color: #999;">
+                                    날짜를 선택하면 해당 날짜의 결재 목록이 표시됩니다.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 회원가입 요청 관리 (대표님만) -->
+            <div id="user-requests" class="section">
+                <h2>회원가입 요청 관리</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>ID</th>
+                                <th>이름</th>
+                                <th>역할</th>
+                                <th>연락처</th>
+                                <th>이메일</th>
+                                <th>신청일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userRequestsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">승인된 사용자 목록</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>이름</th>
+                                <th>역할</th>
+                                <th>연락처</th>
+                                <th>이메일</th>
+                                <th>승인일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvedUsersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">삭제된 사용자 목록</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>이름</th>
+                                <th>역할</th>
+                                <th>연락처</th>
+                                <th>이메일</th>
+                                <th>삭제일</th>
+                                <th>삭제자</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deletedUsersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 백업 조회 (대표님/관리부) -->
+            <div id="backup-viewer" class="section">
+                <h2>백업 관리</h2>
+                
+                <!-- 백업 생성 -->
+                <div style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h3 style="margin-bottom: 15px;">백업 파일 생성</h3>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                            <label>연도 선택</label>
+                            <select id="backupYear" style="padding: 10px;">
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
+                            <label>월 선택</label>
+                            <select id="backupMonth" style="padding: 10px;">
+                                <option value="1">1월</option>
+                                <option value="2">2월</option>
+                                <option value="3">3월</option>
+                                <option value="4">4월</option>
+                                <option value="5">5월</option>
+                                <option value="6">6월</option>
+                                <option value="7">7월</option>
+                                <option value="8">8월</option>
+                                <option value="9">9월</option>
+                                <option value="10">10월</option>
+                                <option value="11">11월</option>
+                                <option value="12">12월</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="createMonthlyBackup()" style="padding: 10px 20px;">월별 백업 생성</button>
+                        <button class="btn btn-success" onclick="createFullBackup()" style="padding: 10px 20px;">전체 백업 생성</button>
+                    </div>
+                    <small style="color: #666; display: block; margin-top: 10px;">월별 백업: 선택한 월의 결재 데이터만 백업합니다. 전체 백업: 모든 결재 데이터를 백업합니다.</small>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 2px solid #e9ecef;">
+
+                <!-- 백업 파일 조회 -->
+                <h3 style="margin-bottom: 15px;">백업 파일 조회</h3>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>백업 파일 업로드</label>
+                    <input type="file" id="backupFileInput" accept=".json" onchange="handleBackupFileUpload(event)" style="padding: 10px;">
+                    <small style="color: #666; display: block; margin-top: 5px;">백업된 JSON 파일을 선택하세요.</small>
+                </div>
+
+                <div id="backupMetaInfo"></div>
+
+                <div class="table-container" id="backupTableContainer" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>번호</th>
+                                <th>제목</th>
+                                <th>현장</th>
+                                <th>작성자</th>
+                                <th>상태</th>
+                                <th>작성일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 내 정보 -->
+            <div id="my-info" class="section">
+                <h2>내 정보</h2>
+                <form id="userInfoForm" onsubmit="updateMyInfo(event)">
+                    <div class="form-group">
+                        <label>ID</label>
+                        <input type="text" id="myInfoUsername" readonly style="background: #f8f9fa; cursor: not-allowed;">
+                        <small style="color: #666;">ID는 변경할 수 없습니다.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>이름 *</label>
+                        <input type="text" id="myInfoName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>연락처</label>
+                        <input type="text" id="myInfoPhone" placeholder="010-1234-5678" maxlength="13" oninput="formatPhoneNumber(this)">
+                    </div>
+                    <div class="form-group">
+                        <label>이메일</label>
+                        <input type="email" id="myInfoEmail" placeholder="example@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>역할</label>
+                        <input type="text" id="myInfoRole" readonly style="background: #f8f9fa; cursor: not-allowed;">
+                        <small style="color: #666;">역할은 변경할 수 없습니다.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">정보 수정</button>
+                </form>
+
+                <hr style="margin: 30px 0; border: none; border-top: 2px solid #e9ecef;">
+
+                <h3 style="margin-bottom: 20px;">비밀번호 변경</h3>
+                <form id="passwordChangeForm" onsubmit="changePassword(event)">
+                    <div class="form-group">
+                        <label>현재 비밀번호 *</label>
+                        <input type="password" id="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label>새 비밀번호 *</label>
+                        <input type="password" id="newPassword" required minlength="4">
+                        <small style="color: #666;">비밀번호는 4자 이상이어야 합니다.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>새 비밀번호 확인 *</label>
+                        <input type="password" id="newPasswordConfirm" required minlength="4">
+                    </div>
+                    <button type="submit" class="btn btn-primary">비밀번호 변경</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 현장 추가 모달 -->
+    <div id="siteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>새 현장 추가</h2>
+                <button class="close-btn" onclick="closeSiteModal()">&times;</button>
+            </div>
+            <form onsubmit="addSite(event)">
+                <div class="form-group">
+                    <label>현장명 *</label>
+                    <input type="text" id="siteName" required>
+                </div>
+                <div class="form-group">
+                    <label>위치 *</label>
+                    <input type="text" id="siteLocation" required>
+                </div>
+                <div class="form-group">
+                    <label>담당자 *</label>
+                    <input type="text" id="siteManager" required>
+                </div>
+                <div class="form-group">
+                    <label>결재 단계 수 *</label>
+                    <input type="number" id="siteSteps" min="1" max="10" value="1" required>
+                    <small style="color: #666;">현장별로 다른 결재 단계를 설정할 수 있습니다.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">추가</button>
+                <button type="button" class="btn btn-secondary" onclick="closeSiteModal()" style="margin-left: 10px;">취소</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 결재 상세 모달 -->
+    <div id="approvalDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="detailTitle">결재 상세</h2>
+                <button class="close-btn" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div id="detailContent">
+            </div>
+        </div>
+    </div>
+
+    <!-- 결재 수정 모달 -->
+    <div id="editApprovalModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>결재 수정</h2>
+                <button class="close-btn" onclick="closeEditApprovalModal()">&times;</button>
+            </div>
+            <form id="editApprovalForm" onsubmit="submitEditedApproval(event)">
+                <input type="hidden" id="editApprovalId">
+                <div style="padding: 20px;">
+                    <div id="editRejectionInfo"></div>
+                    <div class="form-group">
+                        <label>제목 *</label>
+                        <input type="text" id="editApprovalTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label>현장 선택 *</label>
+                        <select id="editApprovalSite" required>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>작성자 *</label>
+                        <input type="text" id="editApprovalAuthor" required>
+                    </div>
+                    <div class="form-group">
+                        <label>내용 *</label>
+                        <textarea id="editApprovalContent" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>첨부 파일 (PDF)</label>
+                        <input type="file" id="editApprovalAttachment" accept=".pdf" onchange="handleEditAttachmentChange(event)">
+                        <small style="color: #666; display: block; margin-top: 5px;">PDF 파일만 업로드 가능합니다. (최대 5MB)</small>
+                        <div id="editAttachmentInfo"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">수정 후 다시 제출</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeEditApprovalModal()" style="flex: 1;">취소</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 알림 모달 -->
+    <div id="notificationModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>알림</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="markAllNotificationsAsRead()" style="padding: 5px 15px; font-size: 14px;">모두 읽음</button>
+                    <button class="btn btn-danger" onclick="deleteAllNotifications()" style="padding: 5px 15px; font-size: 14px;">전체 삭제</button>
+                    <button class="close-btn" onclick="closeNotificationModal()">&times;</button>
+                </div>
+            </div>
+            <div id="notificationsList" style="max-height: 500px; overflow-y: auto;">
+            </div>
+        </div>
+    </div>
+
+    <!-- 사용자 정보 수정 모달 -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>사용자 정보 수정</h2>
+                <button class="close-btn" onclick="closeEditUserModal()">&times;</button>
+            </div>
+            <form id="editUserForm" onsubmit="updateApprovedUserInfo(event)" style="padding: 20px;">
+                <input type="hidden" id="editUserUsername">
+                <div class="form-group">
+                    <label>ID</label>
+                    <input type="text" id="editUserUsernameDisplay" readonly style="background: #f8f9fa; cursor: not-allowed;">
+                    <small style="color: #666;">ID는 변경할 수 없습니다.</small>
+                </div>
+                <div class="form-group">
+                    <label>이름 *</label>
+                    <input type="text" id="editUserName" required>
+                </div>
+                <div class="form-group">
+                    <label>역할 *</label>
+                    <select id="editUserRole" required>
+                        <option value="headquarters">본사</option>
+                        <option value="site">현장</option>
+                        <option value="other">기타</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>연락처</label>
+                    <input type="text" id="editUserPhone" placeholder="010-1234-5678" maxlength="13" oninput="formatPhoneNumber(this)">
+                </div>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="editUserEmail" placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 변경 (선택사항)</label>
+                    <input type="password" id="editUserPassword" placeholder="새 비밀번호를 입력하세요">
+                    <small style="color: #666;">비밀번호를 변경하지 않으려면 비워두세요. (4자 이상)</small>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">수정</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditUserModal()" style="flex: 1;">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 고급 검색 모달 -->
+    <div id="advancedSearchModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>고급 검색</h2>
+                <button class="close-btn" onclick="closeAdvancedSearchModal()">&times;</button>
+            </div>
+            <form onsubmit="performAdvancedSearch(event)" style="padding: 20px;">
+                <div class="form-group">
+                    <label>키워드 (제목, 내용)</label>
+                    <input type="text" id="advancedSearchKeyword" placeholder="검색어를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label>작성자</label>
+                    <input type="text" id="advancedSearchAuthor" placeholder="작성자 ID 또는 이름">
+                </div>
+                <div class="form-group">
+                    <label>현장</label>
+                    <select id="advancedSearchSite">
+                        <option value="">전체 현장</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>상태</label>
+                    <select id="advancedSearchStatus">
+                        <option value="">전체 상태</option>
+                        <option value="pending">대기 중</option>
+                        <option value="processing">진행 중</option>
+                        <option value="approved">승인 완료</option>
+                        <option value="rejected">반려</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>시작일</label>
+                        <input type="date" id="advancedSearchStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label>종료일</label>
+                        <input type="date" id="advancedSearchEndDate">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">검색</button>
+                    <button type="button" class="btn btn-secondary" onclick="resetAdvancedSearch()" style="flex: 1;">초기화</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAdvancedSearchModal()" style="flex: 1;">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 토스트 알림 컨테이너 -->
+    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <!-- Supabase 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS 라이브러리 (Excel 내보내기) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- 스크립트 로드 (순서 중요) -->
+    <script src="js/data.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/dataService.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/users.js"></script>
+    <script src="js/sites.js"></script>
+    <script src="js/approvals.js"></script>
+    <script src="js/backup.js"></script>
+    <script src="js/dateQuery.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/excelExport.js"></script>
+    <script src="js/advancedSearch.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
