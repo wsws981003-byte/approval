@@ -298,11 +298,16 @@ function submitApproval(event) {
                 }
                 document.getElementById('approvalForm').reset();
                 document.getElementById('attachmentInfo').textContent = '';
-                // 작성자 필드를 현재 사용자명으로 다시 설정
+                // 작성자 필드를 현재 사용자의 이름으로 다시 설정
                 if (currentUser) {
                     const authorInput = document.getElementById('approvalAuthor');
                     if (authorInput) {
-                        authorInput.value = currentUser.username;
+                        const user = approvedUsers.find(u => u.username === currentUser.username);
+                        if (user && user.name) {
+                            authorInput.value = user.name;
+                        } else {
+                            authorInput.value = currentUser.username;
+                        }
                     }
                 }
                 alert('결재가 제출되었습니다.');

@@ -115,9 +115,13 @@ function performAdvancedSearch(event) {
     
     // 현장은 자신이 작성한 결재만 보기
     if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'site')) {
-        filtered = filtered.filter(approval => 
-            approval.author === currentUser.username
-        );
+        const user = approvedUsers.find(u => u.username === currentUser.username);
+        const userName = user ? user.name : null;
+        
+        filtered = filtered.filter(approval => {
+            return approval.author === currentUser.username || 
+                   (userName && approval.author === userName);
+        });
     }
     
     // 검색 결과 저장

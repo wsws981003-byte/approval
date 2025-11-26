@@ -18,7 +18,7 @@ function loadMyInfo() {
 }
 
 // 사용자 정보 수정
-function updateMyInfo(event) {
+async function updateMyInfo(event) {
     event.preventDefault();
     if (!currentUser) return;
 
@@ -38,19 +38,36 @@ function updateMyInfo(event) {
     }
 
     // 사용자 정보 업데이트
-    user.name = name;
-    user.phone = phone;
-    user.email = email;
+    const updates = {
+        name: name,
+        phone: phone || null,
+        email: email || null
+    };
 
-    localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
-    alert('정보가 수정되었습니다.');
+    // Supabase 또는 localStorage에 업데이트
+    if (typeof dataService !== 'undefined' && dataService.storageType === 'supabase') {
+        const updated = await dataService.updateApprovedUser(currentUser.username, updates);
+        if (updated) {
+            await syncData();
+            alert('정보가 수정되었습니다.');
+        } else {
+            alert('정보 수정 중 오류가 발생했습니다.');
+            return;
+        }
+    } else {
+        user.name = name;
+        user.phone = phone;
+        user.email = email;
+        localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
+        alert('정보가 수정되었습니다.');
+    }
     
     // 헤더의 사용자 정보도 업데이트
     updateUserInfo();
 }
 
 // 비밀번호 변경
-function changePassword(event) {
+async function changePassword(event) {
     event.preventDefault();
     if (!currentUser) return;
 
@@ -81,13 +98,22 @@ function changePassword(event) {
         return;
     }
 
-    // 비밀번호 변경
-    user.password = newPassword;
-    localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
-    
-    // 폼 초기화
-    document.getElementById('passwordChangeForm').reset();
-    alert('비밀번호가 변경되었습니다.');
+    // Supabase 또는 localStorage에 비밀번호 업데이트
+    if (typeof dataService !== 'undefined' && dataService.storageType === 'supabase') {
+        const updated = await dataService.updateApprovedUser(currentUser.username, { password: newPassword });
+        if (updated) {
+            await syncData();
+            document.getElementById('passwordChangeForm').reset();
+            alert('비밀번호가 변경되었습니다.');
+        } else {
+            alert('비밀번호 변경 중 오류가 발생했습니다.');
+        }
+    } else {
+        user.password = newPassword;
+        localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
+        document.getElementById('passwordChangeForm').reset();
+        alert('비밀번호가 변경되었습니다.');
+    }
 }
 
 // 회원가입 요청 목록 로드

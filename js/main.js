@@ -35,7 +35,7 @@ function hasPermission(action) {
 
 // 현장소장이 해당 현장의 담당자인지 확인
 function isSiteManager(siteId) {
-    if (!currentUser || currentUser.role !== 'manager') return false;
+    if (!currentUser || (currentUser.role !== 'manager' && currentUser.role !== 'site')) return false;
     const site = sites.find(s => s.id === siteId);
     return site && site.manager === currentUser.username;
 }
@@ -51,7 +51,7 @@ async function updateUIByRole() {
     }
 
     // 현장 관리 메뉴 (대표님만)
-    const sitesNavBtn = document.querySelector('.nav-btn[onclick="showSection(\'sites\')"]');
+    const sitesNavBtn = document.querySelector('.nav-btn[onclick*="showSection(\'sites\'"]');
     if (sitesNavBtn) {
         sitesNavBtn.style.display = hasPermission('manage_sites') ? 'inline-block' : 'none';
     }

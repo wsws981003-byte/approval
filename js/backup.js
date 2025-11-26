@@ -183,7 +183,7 @@ function viewBackupApprovalDetail(approvalId) {
 
 // 월별 백업 생성 (UI에서 호출)
 async function createMonthlyBackup() {
-    if (!currentUser || (currentUser.role !== 'ceo' && currentUser.role !== 'admin_dept')) {
+    if (!currentUser || (currentUser.role !== 'ceo' && currentUser.role !== 'headquarters' && currentUser.role !== 'admin_dept' && currentUser.role !== 'other')) {
         alert('백업 권한이 없습니다.');
         return;
     }
@@ -201,7 +201,7 @@ async function createMonthlyBackup() {
 
 // 전체 백업 생성
 async function createFullBackup() {
-    if (!currentUser || (currentUser.role !== 'ceo' && currentUser.role !== 'admin_dept')) {
+    if (!currentUser || (currentUser.role !== 'ceo' && currentUser.role !== 'headquarters' && currentUser.role !== 'admin_dept' && currentUser.role !== 'other')) {
         alert('백업 권한이 없습니다.');
         return;
     }
@@ -255,7 +255,7 @@ async function createFullBackup() {
 
 // 월별 백업 생성 (내부 함수)
 async function backupMonthlyData(year, month) {
-    if (!currentUser || (currentUser.role !== 'ceo' && currentUser.role !== 'admin_dept')) {
+    if (!currentUser || (currentUser.role !== 'ceo' && currentUser.role !== 'headquarters' && currentUser.role !== 'admin_dept' && currentUser.role !== 'other')) {
         alert('백업 권한이 없습니다.');
         return;
     }

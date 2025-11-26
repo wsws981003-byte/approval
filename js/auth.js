@@ -135,8 +135,20 @@ function handleRegister(event) {
             approvedAt: new Date().toISOString(),
             approvedBy: 'system'
         };
-        approvedUsers.push(approvedUser);
-        localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
+        
+        // Supabase 또는 localStorage에 저장
+        if (typeof dataService !== 'undefined' && dataService.storageType === 'supabase') {
+            (async () => {
+                await dataService.saveApprovedUser(approvedUser);
+                await syncData();
+                alert('첫 번째 대표님 계정이 자동으로 승인되었습니다. 로그인해주세요.');
+                closeRegisterModal();
+            })();
+            return;
+        } else {
+            approvedUsers.push(approvedUser);
+            localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
+        }
         
         request.status = 'approved';
         request.approvedAt = new Date().toISOString();
