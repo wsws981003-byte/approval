@@ -30,6 +30,8 @@ export default function NewApproval() {
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    // 작성자 필드는 수정 불가
+    if (name === 'author') return
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
@@ -247,9 +249,13 @@ export default function NewApproval() {
             type="text"
             name="author"
             value={formData.author}
-            onChange={handleChange}
+            readOnly
+            style={{ background: '#f8f9fa', cursor: 'not-allowed' }}
             required
           />
+          <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
+            작성자는 현재 로그인한 사용자로 자동 설정됩니다.
+          </small>
         </div>
         <div className="form-group">
           <label>내용 *</label>
