@@ -84,3 +84,4 @@ export function generateApprovalNumber(approvals) {
   return `AP-${currentYear}-${String(nextNumber).padStart(3, '0')}`
 }
 
+
