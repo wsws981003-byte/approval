@@ -1,14 +1,16 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { getStatusClass, getStatusText, formatDate } from '../../utils'
 import { exportDashboardStats } from '../../utils/excelExport'
+import ApprovalDetailModal from '../Approvals/ApprovalDetailModal'
 import Charts from './Charts'
 import './Dashboard.css'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { currentUser, approvals, approvedUsers } = useApp()
+  const [selectedApproval, setSelectedApproval] = useState(null)
 
   // 사용자별 결재 필터링
   const getUserApprovals = () => {
@@ -35,6 +37,10 @@ export default function Dashboard() {
 
   const handleStatClick = (status) => {
     navigate('/approvals', { state: { filterStatus: status } })
+  }
+
+  const handleApprovalClick = (approval) => {
+    setSelectedApproval(approval)
   }
 
   return (
@@ -87,7 +93,11 @@ export default function Dashboard() {
               </tr>
             ) : (
               recent.map(approval => (
-                <tr key={approval.id}>
+                <tr 
+                  key={approval.id}
+                  onClick={() => handleApprovalClick(approval)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td>{approval.approvalNumber || approval.id}</td>
                   <td>{approval.title}</td>
                   <td>{approval.siteName}</td>
@@ -104,6 +114,13 @@ export default function Dashboard() {
           </tbody>
         </table>
       </div>
+
+      {selectedApproval && (
+        <ApprovalDetailModal
+          approval={selectedApproval}
+          onClose={() => setSelectedApproval(null)}
+        />
+      )}
     </div>
   )
 }
