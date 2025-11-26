@@ -586,6 +586,50 @@ tr:hover {
         white-space: nowrap;
     }
 
+    .custom-calendar {
+        padding: 15px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .calendar-header {
+        padding: 0 5px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+    }
+
+    .calendar-header h3 {
+        font-size: 18px;
+        flex: 1;
+        text-align: center;
+    }
+
+    .calendar-nav-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .calendar-weekdays {
+        gap: 3px;
+        margin-bottom: 8px;
+    }
+
+    .calendar-weekday {
+        padding: 8px 4px;
+        font-size: 12px;
+    }
+
+    .calendar-days {
+        gap: 3px;
+    }
+
+    .calendar-day {
+        font-size: 12px;
+        min-height: 0;
+    }
+
     .modal-content {
         width: 95%;
         padding: 20px;
