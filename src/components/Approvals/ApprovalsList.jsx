@@ -14,8 +14,8 @@ export default function ApprovalsList() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState(location.state?.filterStatus || '')
   const [siteFilter, setSiteFilter] = useState('')
-  const [deletedFilter, setDeletedFilter] = useState('all') // 'all', 'active', 'deleted'
   const [deletedApprovals, setDeletedApprovals] = useState([])
+  const [showDeletedApprovals, setShowDeletedApprovals] = useState(false)
   const [selectedApproval, setSelectedApproval] = useState(null)
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
   const [advancedSearchResults, setAdvancedSearchResults] = useState(null)
@@ -40,11 +40,29 @@ export default function ApprovalsList() {
       return advancedSearchResults
     }
 
-    // 활성 결재와 삭제된 결재 합치기
-    let allApprovals = [...approvals]
-    
-    // 삭제된 결재 필터링
-    let filteredDeleted = deletedApprovals.filter(approval => {
+    // 활성 결재만 필터링
+    let filtered = approvals.filter(approval => {
+      const matchSearch = !search || approval.title.toLowerCase().includes(search.toLowerCase())
+      const matchStatus = !statusFilter || approval.status === statusFilter
+      const matchSite = !siteFilter || approval.siteId === parseInt(siteFilter)
+      return matchSearch && matchStatus && matchSite
+    })
+
+    if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'site')) {
+      const user = approvedUsers.find(u => u.username === currentUser.username)
+      const userName = user ? user.name : null
+      
+      filtered = filtered.filter(approval => {
+        return approval.author === currentUser.username || 
+               (userName && approval.author === userName)
+      })
+    }
+
+    return filtered
+  }
+
+  const getFilteredDeletedApprovals = () => {
+    let filtered = deletedApprovals.filter(approval => {
       const matchSearch = !search || 
         approval.title.toLowerCase().includes(search.toLowerCase()) ||
         approval.author.toLowerCase().includes(search.toLowerCase()) ||
@@ -59,54 +77,21 @@ export default function ApprovalsList() {
       const user = approvedUsers.find(u => u.username === currentUser.username)
       const userName = user ? user.name : null
       
-      filteredDeleted = filteredDeleted.filter(approval => {
+      filtered = filtered.filter(approval => {
         return approval.author === currentUser.username || 
                (userName && approval.author === userName)
       })
     }
 
-    // 삭제된 결재에 isDeleted 플래그 추가
-    filteredDeleted = filteredDeleted.map(a => ({ ...a, isDeleted: true }))
-
-    // 활성 결재 필터링
-    let filteredActive = approvals.filter(approval => {
-      const matchSearch = !search || approval.title.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = !statusFilter || approval.status === statusFilter
-      const matchSite = !siteFilter || approval.siteId === parseInt(siteFilter)
-      return matchSearch && matchStatus && matchSite
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.deletedAt || a.createdAt)
+      const dateB = new Date(b.deletedAt || b.createdAt)
+      return dateB - dateA
     })
-
-    if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'site')) {
-      const user = approvedUsers.find(u => u.username === currentUser.username)
-      const userName = user ? user.name : null
-      
-      filteredActive = filteredActive.filter(approval => {
-        return approval.author === currentUser.username || 
-               (userName && approval.author === userName)
-      })
-    }
-
-    // 삭제 필터에 따라 반환
-    if (deletedFilter === 'deleted') {
-      return filteredDeleted.sort((a, b) => {
-        const dateA = new Date(a.deletedAt || a.createdAt)
-        const dateB = new Date(b.deletedAt || b.createdAt)
-        return dateB - dateA
-      })
-    } else if (deletedFilter === 'active') {
-      return filteredActive
-    } else {
-      // 전체: 활성 + 삭제된 결재 합치기
-      const combined = [...filteredActive, ...filteredDeleted]
-      return combined.sort((a, b) => {
-        const dateA = new Date(a.deletedAt || a.createdAt)
-        const dateB = new Date(b.deletedAt || b.createdAt)
-        return dateB - dateA
-      })
-    }
   }
 
   const filtered = getFilteredApprovals()
+  const filteredDeleted = getFilteredDeletedApprovals()
 
   const handleClearAdvancedSearch = () => {
     setAdvancedSearchResults(null)
@@ -141,11 +126,6 @@ export default function ApprovalsList() {
             </option>
           ))}
         </select>
-        <select value={deletedFilter} onChange={(e) => setDeletedFilter(e.target.value)}>
-          <option value="all">전체</option>
-          <option value="active">활성 결재</option>
-          <option value="deleted">삭제된 결재</option>
-        </select>
         <button
           className="btn btn-primary"
           onClick={() => setShowAdvancedSearch(true)}
@@ -179,15 +159,13 @@ export default function ApprovalsList() {
               <th>작성자</th>
               <th>상태</th>
               <th>작성일</th>
-              {deletedFilter === 'all' || deletedFilter === 'deleted' ? <th>삭제일</th> : null}
-              {deletedFilter === 'all' || deletedFilter === 'deleted' ? <th>삭제자</th> : null}
               <th>작업</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={deletedFilter === 'all' || deletedFilter === 'deleted' ? 9 : 7} className="empty-state">결재 내역이 없습니다.</td>
+                <td colSpan="7" className="empty-state">결재 내역이 없습니다.</td>
               </tr>
             ) : (
               filtered.map(approval => (
@@ -196,7 +174,7 @@ export default function ApprovalsList() {
                   approval={approval}
                   currentUser={currentUser}
                   approvedUsers={approvedUsers}
-                  showDeletedInfo={deletedFilter === 'all' || deletedFilter === 'deleted'}
+                  showDeletedInfo={false}
                   onViewDetail={() => setSelectedApproval(approval.id)}
                   onActionComplete={() => {
                     syncData()
@@ -207,6 +185,80 @@ export default function ApprovalsList() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* 삭제된 결재 목록 섹션 */}
+      <div style={{ marginTop: '40px' }}>
+        <h3
+          style={{
+            marginBottom: '15px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px',
+            background: '#f8f9fa',
+            borderRadius: '8px',
+            userSelect: 'none'
+          }}
+          onClick={() => setShowDeletedApprovals(!showDeletedApprovals)}
+        >
+          삭제된 결재 목록 ({filteredDeleted.length}건)
+          <span style={{ marginLeft: '10px', fontSize: '0.8em' }}>
+            {showDeletedApprovals ? '▼' : '▶'}
+          </span>
+        </h3>
+        {showDeletedApprovals && (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>번호</th>
+                  <th>제목</th>
+                  <th>현장</th>
+                  <th>작성자</th>
+                  <th>상태</th>
+                  <th>작성일</th>
+                  <th>삭제일</th>
+                  <th>삭제자</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDeleted.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="empty-state">삭제된 결재가 없습니다.</td>
+                  </tr>
+                ) : (
+                  filteredDeleted.map(approval => (
+                    <tr key={approval.id} style={{ opacity: 0.7 }}>
+                      <td>{approval.approvalNumber || approval.id}</td>
+                      <td>{approval.title}</td>
+                      <td>{approval.siteName}</td>
+                      <td>{approval.author}</td>
+                      <td>
+                        <span className={`badge badge-${getStatusClass(approval.status)}`}>
+                          {getStatusText(approval.status)}
+                        </span>
+                      </td>
+                      <td>{formatDate(approval.createdAt)}</td>
+                      <td>{formatDate(approval.deletedAt)}</td>
+                      <td>{approval.deletedBy || '-'}</td>
+                      <td>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => setSelectedApproval(approval.id)}
+                          style={{ padding: '5px 10px', fontSize: '14px' }}
+                        >
+                          상세
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {selectedApproval && (

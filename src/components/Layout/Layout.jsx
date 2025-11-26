@@ -27,7 +27,6 @@ export default function Layout({ children }) {
     { path: '/new-approval', label: '결재 작성', show: true },
     { path: '/approvals', label: '결재 목록', show: true },
     { path: '/pending', label: '대기 중인 결재', show: true },
-    { path: '/deleted-approvals', label: '삭제된 결재', show: currentUser?.role === 'ceo' || currentUser?.role === 'headquarters' },
     { path: '/date-query', label: '날짜별 조회', show: true },
     { path: '/my-info', label: '내 정보', show: true },
     { path: '/user-requests', label: '가입 요청', show: currentUser?.role === 'ceo' || currentUser?.role === 'headquarters' },

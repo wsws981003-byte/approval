@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
+import { dataService } from '../../services/dataService'
 import { getStatusClass, getStatusText, formatDate } from '../../utils'
 
 export default function ApprovalDetailModal({ approvalId, approval: approvalProp, onClose }) {
@@ -10,8 +11,19 @@ export default function ApprovalDetailModal({ approvalId, approval: approvalProp
     if (approvalProp) {
       setApproval(approvalProp)
     } else if (approvalId) {
+      // 먼저 활성 결재에서 찾기
       const found = approvals.find(a => a.id === approvalId)
-      setApproval(found)
+      if (found) {
+        setApproval(found)
+      } else {
+        // 활성 결재에 없으면 삭제된 결재에서 찾기
+        dataService.getDeletedApprovals().then(deletedApprovals => {
+          const deleted = deletedApprovals.find(a => a.id === approvalId)
+          if (deleted) {
+            setApproval(deleted)
+          }
+        })
+      }
     }
   }, [approvalId, approvalProp, approvals])
 
