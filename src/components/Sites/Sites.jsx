@@ -6,16 +6,13 @@ export default function Sites() {
   const { sites, currentUser, hasPermission, syncData, approvedUsers } = useApp()
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [showApproverModal, setShowApproverModal] = useState(false)
   const [editingSite, setEditingSite] = useState(null)
-  const [approverSite, setApproverSite] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     location: '',
     manager: '',
     steps: 1
   })
-  const [approvers, setApprovers] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -125,38 +122,6 @@ export default function Sites() {
     }
   }
 
-  const handleSetApprovers = (site) => {
-    setApproverSite(site)
-    setApprovers(site.approvers ? [...site.approvers] : Array(site.steps || 1).fill(''))
-    setShowApproverModal(true)
-  }
-
-  const handleApproverChange = (index, value) => {
-    const newApprovers = [...approvers]
-    newApprovers[index] = value
-    setApprovers(newApprovers)
-  }
-
-  const handleApproversSubmit = async (e) => {
-    e.preventDefault()
-    if (!approverSite) return
-
-    setLoading(true)
-    try {
-      await dataService.updateSite(approverSite.id, { approvers })
-      await syncData()
-      setShowApproverModal(false)
-      setApproverSite(null)
-      setApprovers([])
-      alert('결재 승인자가 설정되었습니다.')
-    } catch (error) {
-      console.error('승인자 설정 오류:', error)
-      alert('승인자 설정 중 오류가 발생했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleDelete = async (siteId) => {
     if (!hasPermission('manage_sites')) {
       alert('현장 삭제 권한이 없습니다.')
@@ -234,13 +199,6 @@ export default function Sites() {
                             style={{ padding: '5px 10px', fontSize: '14px' }}
                           >
                             수정
-                          </button>
-                          <button
-                            className="btn btn-info"
-                            onClick={() => handleSetApprovers(site)}
-                            style={{ padding: '5px 10px', fontSize: '14px', background: '#17a2b8', color: 'white' }}
-                          >
-                            승인자 설정
                           </button>
                           <button
                             className="btn btn-danger"
@@ -396,49 +354,6 @@ export default function Sites() {
         </div>
       )}
 
-      {showApproverModal && approverSite && (
-        <div className="modal active" style={{ display: 'flex' }} onClick={(e) => e.target === e.currentTarget && setShowApproverModal(false)}>
-          <div className="modal-content" style={{ maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{approverSite.name} - 결재 승인자 설정</h2>
-              <button className="close-btn" onClick={() => { setShowApproverModal(false); setApproverSite(null) }}>&times;</button>
-            </div>
-            <form onSubmit={handleApproversSubmit} style={{ padding: '20px' }}>
-              {Array.from({ length: approverSite.steps || 1 }, (_, i) => (
-                <div key={i} className="form-group">
-                  <label>{i + 1}단계 승인자</label>
-                  <input
-                    type="text"
-                    value={approvers[i] || ''}
-                    onChange={(e) => handleApproverChange(i, e.target.value)}
-                    placeholder={`${i + 1}단계 승인자 이름 또는 ID`}
-                    style={{ marginBottom: '10px' }}
-                  />
-                </div>
-              ))}
-              <div style={{ marginTop: '20px', padding: '10px', background: '#e3f2fd', borderRadius: '8px' }}>
-                <small style={{ color: '#666' }}>
-                  💡 승인자는 결재가 해당 단계에 도달했을 때 승인할 수 있는 사용자입니다.<br />
-                  사용자 이름 또는 ID를 입력하세요. 비워두면 모든 권한 있는 사용자가 승인할 수 있습니다.
-                </small>
-              </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={loading}>
-                  {loading ? '저장 중...' : '저장'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => { setShowApproverModal(false); setApproverSite(null) }}
-                  style={{ flex: 1 }}
-                >
-                  취소
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
