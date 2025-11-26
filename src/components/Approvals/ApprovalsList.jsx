@@ -71,7 +71,6 @@ export default function ApprovalsList() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">전체 상태</option>
           <option value="pending">대기 중</option>
-          <option value="processing">진행 중</option>
           <option value="approved">승인 완료</option>
           <option value="rejected">반려</option>
         </select>
