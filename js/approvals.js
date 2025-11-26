@@ -424,7 +424,13 @@ async function loadPendingApprovals() {
     // 현장은 자신이 작성한 결재만 보기
     // 기타와 본사는 모든 결재를 볼 수 있음
     if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'site')) {
-        pending = pending.filter(a => a.author === currentUser.username);
+        const user = approvedUsers.find(u => u.username === currentUser.username);
+        const userName = user ? user.name : null;
+        
+        pending = pending.filter(a => {
+            return a.author === currentUser.username || 
+                   (userName && a.author === userName);
+        });
     }
     
     if (pending.length === 0) {
@@ -479,14 +485,15 @@ function getFilteredApprovals() {
     
     // 현장은 자신이 작성한 결재만 보기
     // 기타와 본사는 모든 결재를 볼 수 있음
-    // 작성자 필드에 입력한 값과 currentUser.username이 다를 수 있으므로
-    // 모든 사용자가 본인이 작성한 결재를 볼 수 있도록 보장
     if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'site')) {
         // 현장은 자신이 작성한 결재만 보기
-        // 작성자 필드 값이 currentUser.username과 일치하는 경우만 필터링
+        // 작성자 필드에 입력한 값이 현재 사용자의 username 또는 name과 일치하는지 확인
+        const user = approvedUsers.find(u => u.username === currentUser.username);
+        const userName = user ? user.name : null;
+        
         filtered = filtered.filter(approval => {
-            // 작성자 필드에 입력한 값이 현재 사용자명과 일치하는지 확인
-            return approval.author === currentUser.username;
+            return approval.author === currentUser.username || 
+                   (userName && approval.author === userName);
         });
     }
     // 본사와 기타는 모든 결재를 볼 수 있음 (필터링 없음)
@@ -957,7 +964,13 @@ function updateDashboard() {
     // 기타와 본사는 모든 결재를 집계
     let userApprovals = approvals;
     if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'site')) {
-        userApprovals = approvals.filter(a => a.author === currentUser.username);
+        const user = approvedUsers.find(u => u.username === currentUser.username);
+        const userName = user ? user.name : null;
+        
+        userApprovals = approvals.filter(a => {
+            return a.author === currentUser.username || 
+                   (userName && a.author === userName);
+        });
     }
     
     const total = userApprovals.length;
