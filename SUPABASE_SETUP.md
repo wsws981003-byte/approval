@@ -136,12 +136,40 @@ CREATE TABLE notifications (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. 삭제된 결재 테이블
+CREATE TABLE deleted_approvals (
+    id BIGINT PRIMARY KEY,
+    approval_number TEXT,
+    title TEXT NOT NULL,
+    site_id BIGINT REFERENCES sites(id),
+    site_name TEXT,
+    author TEXT NOT NULL,
+    content TEXT,
+    attachment_file_name TEXT,
+    attachment_data TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    current_step INTEGER DEFAULT 0,
+    total_steps INTEGER DEFAULT 1,
+    approvers TEXT[] DEFAULT ARRAY[]::TEXT[],
+    approvals JSONB DEFAULT '[]'::JSONB,
+    rejected_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    updated_at TIMESTAMPTZ,
+    original_created_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_by TEXT
+);
+
 -- 인덱스 생성 (검색 속도 향상)
 CREATE INDEX idx_approvals_status ON approvals(status);
 CREATE INDEX idx_approvals_author ON approvals(author);
 CREATE INDEX idx_approvals_created_at ON approvals(created_at);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_read ON notifications(read);
+CREATE INDEX idx_deleted_approvals_deleted_at ON deleted_approvals(deleted_at);
+CREATE INDEX idx_deleted_approvals_deleted_by ON deleted_approvals(deleted_by);
+CREATE INDEX idx_deleted_approvals_author ON deleted_approvals(author);
 ```
 
 ### 3-3. 기본 대표님 계정 추가
@@ -153,6 +181,44 @@ INSERT INTO approved_users (username, password, role, name, approved_at, approve
 VALUES ('admin', 'admin123', 'ceo', '대표님', NOW(), 'system')
 ON CONFLICT (username) DO NOTHING;
 ```
+
+### 3-4. (선택사항) 기존 프로젝트에 삭제된 결재 테이블 추가
+만약 이미 Supabase 프로젝트를 사용 중이고 `deleted_approvals` 테이블이 없는 경우, 아래 SQL을 실행하세요:
+
+```sql
+-- 삭제된 결재 테이블 생성
+CREATE TABLE IF NOT EXISTS deleted_approvals (
+    id BIGINT PRIMARY KEY,
+    approval_number TEXT,
+    title TEXT NOT NULL,
+    site_id BIGINT REFERENCES sites(id),
+    site_name TEXT,
+    author TEXT NOT NULL,
+    content TEXT,
+    attachment_file_name TEXT,
+    attachment_data TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    current_step INTEGER DEFAULT 0,
+    total_steps INTEGER DEFAULT 1,
+    approvers TEXT[] DEFAULT ARRAY[]::TEXT[],
+    approvals JSONB DEFAULT '[]'::JSONB,
+    rejected_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    updated_at TIMESTAMPTZ,
+    original_created_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_by TEXT
+);
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_deleted_approvals_deleted_at ON deleted_approvals(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_deleted_approvals_deleted_by ON deleted_approvals(deleted_by);
+CREATE INDEX IF NOT EXISTS idx_deleted_approvals_author ON deleted_approvals(author);
+CREATE INDEX IF NOT EXISTS idx_deleted_approvals_status ON deleted_approvals(status);
+```
+
+또는 `supabase_deleted_approvals.sql` 파일의 내용을 SQL Editor에서 실행하세요.
 
 ---
 

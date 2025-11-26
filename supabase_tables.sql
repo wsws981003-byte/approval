@@ -88,12 +88,40 @@ CREATE TABLE notifications (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. 삭제된 결재 테이블
+CREATE TABLE deleted_approvals (
+    id BIGINT PRIMARY KEY,
+    approval_number TEXT,
+    title TEXT NOT NULL,
+    site_id BIGINT REFERENCES sites(id),
+    site_name TEXT,
+    author TEXT NOT NULL,
+    content TEXT,
+    attachment_file_name TEXT,
+    attachment_data TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    current_step INTEGER DEFAULT 0,
+    total_steps INTEGER DEFAULT 1,
+    approvers TEXT[] DEFAULT ARRAY[]::TEXT[],
+    approvals JSONB DEFAULT '[]'::JSONB,
+    rejected_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    updated_at TIMESTAMPTZ,
+    original_created_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NOW(),
+    deleted_by TEXT
+);
+
 -- 인덱스 생성
 CREATE INDEX idx_approvals_status ON approvals(status);
 CREATE INDEX idx_approvals_author ON approvals(author);
 CREATE INDEX idx_approvals_created_at ON approvals(created_at);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_read ON notifications(read);
+CREATE INDEX idx_deleted_approvals_deleted_at ON deleted_approvals(deleted_at);
+CREATE INDEX idx_deleted_approvals_deleted_by ON deleted_approvals(deleted_by);
+CREATE INDEX idx_deleted_approvals_author ON deleted_approvals(author);
 
 
 
