@@ -7,11 +7,7 @@ let notificationCheckInterval = null;
 function initNotifications() {
     updateNotificationBadge();
     startNotificationCheck();
-    
-    // 브라우저 알림 권한 요청
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
+    // 브라우저 알림 권한 요청 제거 - 인앱 알림만 사용
 }
 
 // 알림 생성
@@ -52,14 +48,7 @@ function createNotification(type, title, message, approvalId = null, userId = nu
     updateNotificationBadge();
     showNotificationToast(notification);
     
-    // 브라우저 알림 표시
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-            body: message,
-            icon: '/favicon.ico',
-            tag: `approval-${approvalId || 'system'}`
-        });
-    }
+    // 인앱 알림만 사용 (브라우저 알림 제거)
     
     return notification;
 }
