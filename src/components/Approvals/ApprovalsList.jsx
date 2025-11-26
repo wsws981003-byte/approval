@@ -175,7 +175,12 @@ function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onAct
 
   const canEdit = () => {
     if (!currentUser) return false
-    return approval.author === currentUser.username && 
+    // 작성자만 수정 가능 (username 또는 name으로 매칭)
+    const user = approvedUsers.find(u => u.username === currentUser.username)
+    const userName = user ? user.name : null
+    const isAuthor = approval.author === currentUser.username || 
+                     (userName && approval.author === userName)
+    return isAuthor && 
            (approval.status === 'pending' || approval.status === 'processing' || approval.status === 'rejected')
   }
 
