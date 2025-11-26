@@ -1,5 +1,5 @@
 /* 기존 styles.css의 내용을 React로 가져옴 */
-@import '../styles.css';
+@import '../legacy/styles.css';
 
 /* React 특화 스타일 추가 */
 #root {
