@@ -373,6 +373,27 @@ class DataService {
     }
   }
 
+  // 삭제된 결재 영구 삭제
+  async permanentlyDeleteApproval(approvalId) {
+    if (this.storageType === 'supabase' && this.supabase) {
+      const { error } = await this.supabase
+        .from('deleted_approvals')
+        .delete()
+        .eq('id', approvalId)
+      
+      if (error) {
+        console.error('Supabase 삭제된 결재 영구 삭제 오류:', error)
+        return false
+      }
+      return true
+    } else {
+      const deletedApprovals = JSON.parse(localStorage.getItem('deletedApprovals')) || []
+      const filtered = deletedApprovals.filter(a => a.id !== approvalId)
+      localStorage.setItem('deletedApprovals', JSON.stringify(filtered))
+      return true
+    }
+  }
+
   // 현장 데이터 저장
   async saveSite(site) {
     if (this.storageType === 'supabase' && this.supabase) {

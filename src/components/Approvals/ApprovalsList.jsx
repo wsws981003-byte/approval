@@ -251,6 +251,31 @@ export default function ApprovalsList() {
                         >
                           상세
                         </button>
+                        {(currentUser?.role === 'ceo' || currentUser?.role === 'headquarters') && (
+                          <button
+                            className="btn btn-danger"
+                            onClick={async () => {
+                              const approvalNumber = approval.approvalNumber || approval.id
+                              if (!window.confirm(`결재 번호 ${approvalNumber} (${approval.title})를 영구적으로 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) return
+                              
+                              try {
+                                const success = await dataService.permanentlyDeleteApproval(approval.id)
+                                if (success) {
+                                  await loadDeletedApprovals()
+                                  alert('결재가 영구적으로 삭제되었습니다.')
+                                } else {
+                                  alert('영구 삭제 중 오류가 발생했습니다.')
+                                }
+                              } catch (error) {
+                                console.error('영구 삭제 오류:', error)
+                                alert('영구 삭제 중 오류가 발생했습니다.')
+                              }
+                            }}
+                            style={{ padding: '5px 10px', fontSize: '14px', marginLeft: '5px' }}
+                          >
+                            삭제
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
