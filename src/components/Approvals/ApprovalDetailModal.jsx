@@ -15,7 +15,21 @@ export default function ApprovalDetailModal({ approvalId, approval: approvalProp
     }
   }, [approvalId, approvalProp, approvals])
 
-  if (!approval) return null
+  if (!approval) {
+    return (
+      <div className="modal active" style={{ display: 'flex' }} onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>결재 정보</h2>
+            <button className="close-btn" onClick={onClose}>&times;</button>
+          </div>
+          <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+            결재 정보를 찾을 수 없습니다.
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const previewAttachment = () => {
     if (!approval.attachmentData) {
