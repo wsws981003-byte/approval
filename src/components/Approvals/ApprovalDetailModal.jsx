@@ -135,23 +135,36 @@ export default function ApprovalDetailModal({ approvalId, approval: approvalProp
 
           <div style={{ marginTop: '30px' }}>
             <strong>결재 라인:</strong>
-            {Array.from({ length: approval.totalSteps }, (_, i) => {
+            {Array.from({ length: 2 }, (_, i) => {
+              // 항상 2단계로 표시 (1단계: 본사, 2단계: 대표님)
               const approvalData = approval.approvals[i]
               const isCurrent = i === approval.currentStep && approval.status !== 'approved' && approval.status !== 'rejected'
               const isCompleted = approvalData && approvalData.status === 'approved'
               const isRejected = approvalData && approvalData.status === 'rejected'
+              
+              // 단계별 이름 설정
+              let stepName = '미지정'
+              if (i === 0) {
+                stepName = approval.approvers[0] || '본사'
+              } else if (i === 1) {
+                stepName = approval.approvers[1] || '대표님'
+              }
 
               let className = 'approval-line'
               if (isCompleted) className += ' completed'
               if (isRejected) className += ' rejected'
 
+              // 최종 승인 여부 확인 (2단계이고 상태가 approved인 경우)
+              const isFinalApproved = i === 1 && approval.status === 'approved' && isCompleted
+
               return (
-                <div key={i} className={className}>
-                  <strong>{i + 1}단계: {approval.approvers[i] || '미지정'}</strong>
-                  {isCurrent && <span style={{ color: '#ffc107' }}> ⏳ 대기 중</span>}
-                  {isCompleted && <span style={{ color: '#28a745' }}> ✓ 승인 완료 ({formatDate(approvalData.approvedAt)})</span>}
-                  {isRejected && <span style={{ color: '#dc3545' }}> ✗ 반려 ({approvalData.reason || ''})</span>}
-                  {!isCurrent && !isCompleted && !isRejected && <span style={{ color: '#999' }}> 대기 중</span>}
+                <div key={i} className={className} style={{ marginBottom: '10px', padding: '10px', background: isCompleted ? '#d4edda' : isRejected ? '#f8d7da' : '#f8f9fa', borderRadius: '8px' }}>
+                  <strong>{i + 1}단계: {stepName}</strong>
+                  {isCurrent && <span style={{ color: '#ffc107', marginLeft: '10px' }}> ⏳ 대기 중</span>}
+                  {isCompleted && !isFinalApproved && <span style={{ color: '#28a745', marginLeft: '10px' }}> ✓ 승인 완료 ({formatDate(approvalData.approvedAt)})</span>}
+                  {isFinalApproved && <span style={{ color: '#28a745', marginLeft: '10px', fontWeight: 'bold' }}> ✓ 최종 승인 완료 ({formatDate(approvalData.approvedAt)})</span>}
+                  {isRejected && <span style={{ color: '#dc3545', marginLeft: '10px' }}> ✗ 반려 ({approvalData.reason || ''})</span>}
+                  {!isCurrent && !isCompleted && !isRejected && <span style={{ color: '#999', marginLeft: '10px' }}> 대기 중</span>}
                 </div>
               )
             })}
