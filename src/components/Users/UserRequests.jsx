@@ -280,6 +280,7 @@ export default function UserRequests() {
             ) : (
               approvedUsers.map(user => {
                 const isDefaultAdmin = user.username === 'admin' && user.role === 'ceo'
+                const isCEO = currentUser && currentUser.role === 'ceo'
                 return (
                   <tr key={user.username}>
                     <td>{user.username}</td>
@@ -298,7 +299,7 @@ export default function UserRequests() {
                       </button>
                       {isDefaultAdmin ? (
                         <span style={{ color: '#999', fontSize: '14px', marginLeft: '5px' }}>삭제 불가</span>
-                      ) : (
+                      ) : isCEO ? (
                         <button
                           className="btn btn-danger"
                           onClick={() => handleDelete(user.username)}
@@ -306,7 +307,7 @@ export default function UserRequests() {
                         >
                           삭제
                         </button>
-                      )}
+                      ) : null}
                     </td>
                   </tr>
                 )
