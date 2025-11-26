@@ -250,8 +250,11 @@ function DateQueryRow({ approval, currentUser, approvedUsers, onViewDetail, onAc
     if (currentUser.role === 'headquarters') {
       return approval.currentStep === 0 && (approval.status === 'pending' || approval.status === 'processing')
     }
-    // 대표님 계정은 항상 승인 가능 (본사 단계를 건너뛸 수 있음)
-    if (currentUser.role === 'ceo') return true
+    // 대표님 계정은 0단계(본사 단계) 또는 1단계(대표님 단계)에서 승인 가능
+    if (currentUser.role === 'ceo') {
+      return (approval.status === 'pending' || approval.status === 'processing') && 
+             (approval.currentStep === 0 || approval.currentStep === 1)
+    }
     if (currentUser.role === 'admin_dept' || currentUser.role === 'other') return false
     if (currentUser.role === 'manager' || currentUser.role === 'site') {
       return isSiteManager(approval.siteId)
