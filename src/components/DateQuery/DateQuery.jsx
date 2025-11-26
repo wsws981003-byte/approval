@@ -132,10 +132,10 @@ export default function DateQuery() {
     <div>
       <h2>날짜별 결재 조회</h2>
       <div style={{ marginBottom: '20px', padding: '20px', background: '#f8f9fa', borderRadius: '8px', width: '100%', boxSizing: 'border-box' }}>
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', width: '100%' }}>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', width: '100%', justifyContent: 'center' }}>
           {/* 커스텀 달력 */}
-          <div style={{ flex: 1, minWidth: '280px', maxWidth: '100%', width: '100%' }}>
-            <div className="custom-calendar">
+          <div style={{ flex: '0 1 auto', minWidth: '280px', maxWidth: '100%', width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <div className="custom-calendar" style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
               <div className="calendar-header">
                 <button className="calendar-nav-btn" onClick={() => changeMonth(-1)}>‹</button>
                 <h3 id="calendarMonthYear">
