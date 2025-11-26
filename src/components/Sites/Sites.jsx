@@ -23,7 +23,7 @@ export default function Sites() {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'steps' ? parseInt(value) || 1 : value
+      [name]: value
     }))
   }
 
@@ -31,19 +31,13 @@ export default function Sites() {
     e.preventDefault()
     setLoading(true)
 
-    if (formData.steps < 1 || formData.steps > 10) {
-      alert('결재 단계 수는 1~10 사이여야 합니다.')
-      setLoading(false)
-      return
-    }
-
     const site = {
       id: Date.now(),
       name: formData.name,
       location: formData.location,
       manager: formData.manager,
-      steps: formData.steps,
-      approvers: Array(formData.steps).fill('')
+      steps: 1, // 기본값 1단계로 고정
+      approvers: Array(1).fill('')
     }
 
     try {
@@ -70,7 +64,7 @@ export default function Sites() {
       name: site.name || '',
       location: site.location || '',
       manager: site.manager || '',
-      steps: site.steps || 1
+      steps: 1 // UI에서 제거되었지만 formData는 유지
     })
     setShowEditModal(true)
   }
@@ -81,31 +75,12 @@ export default function Sites() {
 
     setLoading(true)
 
-    if (formData.steps < 1 || formData.steps > 10) {
-      alert('결재 단계 수는 1~10 사이여야 합니다.')
-      setLoading(false)
-      return
-    }
-
     try {
       const updates = {
         name: formData.name,
         location: formData.location,
         manager: formData.manager,
-        steps: formData.steps
-      }
-
-      // 결재 단계가 변경된 경우 approvers 배열 조정
-      if (formData.steps !== editingSite.steps) {
-        const newApprovers = Array(formData.steps).fill('')
-        if (editingSite.approvers) {
-          editingSite.approvers.forEach((approver, idx) => {
-            if (idx < formData.steps) {
-              newApprovers[idx] = approver
-            }
-          })
-        }
-        updates.approvers = newApprovers
+        steps: editingSite.steps || 1 // 기존 단계 수 유지
       }
 
       await dataService.updateSite(editingSite.id, updates)
@@ -163,7 +138,6 @@ export default function Sites() {
               <th>현장명</th>
               <th>위치</th>
               <th>담당자</th>
-              <th>결재 단계</th>
               <th>승인자</th>
               <th>작업</th>
             </tr>
@@ -171,7 +145,7 @@ export default function Sites() {
           <tbody>
             {sites.length === 0 ? (
               <tr>
-                <td colSpan="6" className="empty-state">등록된 현장이 없습니다.</td>
+                <td colSpan="5" className="empty-state">등록된 현장이 없습니다.</td>
               </tr>
             ) : (
               sites.map(site => {
@@ -183,7 +157,6 @@ export default function Sites() {
                     <td>{site.name}</td>
                     <td>{site.location}</td>
                     <td>{site.manager}</td>
-                    <td>{site.steps}단계</td>
                     <td>
                       <span style={{ fontSize: '13px', color: approversList === '미설정' ? '#999' : '#333' }}>
                         {approversList}
@@ -258,19 +231,6 @@ export default function Sites() {
                   required
                 />
               </div>
-              <div className="form-group">
-                <label>결재 단계 수 *</label>
-                <input
-                  type="number"
-                  name="steps"
-                  value={formData.steps}
-                  onChange={handleChange}
-                  min="1"
-                  max="10"
-                  required
-                />
-                <small style={{ color: '#666' }}>현장별로 다른 결재 단계를 설정할 수 있습니다.</small>
-              </div>
               <button type="submit" className="btn btn-primary" disabled={loading}>
                 {loading ? '추가 중...' : '추가'}
               </button>
@@ -324,19 +284,6 @@ export default function Sites() {
                   onChange={handleChange}
                   required
                 />
-              </div>
-              <div className="form-group">
-                <label>결재 단계 수 *</label>
-                <input
-                  type="number"
-                  name="steps"
-                  value={formData.steps}
-                  onChange={handleChange}
-                  min="1"
-                  max="10"
-                  required
-                />
-                <small style={{ color: '#666' }}>결재 단계를 변경하면 승인자 설정이 초기화될 수 있습니다.</small>
               </div>
               <button type="submit" className="btn btn-primary" disabled={loading}>
                 {loading ? '수정 중...' : '수정'}
