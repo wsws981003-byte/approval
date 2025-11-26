@@ -80,6 +80,14 @@ export default function NewApproval() {
       author = currentUser.username
     }
 
+    // 본사 계정과 대표님 계정 찾기
+    const allApprovedUsers = await dataService.getApprovedUsers()
+    const headquartersUser = allApprovedUsers.find(u => u.role === 'headquarters')
+    const ceoUser = allApprovedUsers.find(u => u.role === 'ceo')
+    
+    const headquartersName = headquartersUser?.name || headquartersUser?.username || '본사'
+    const ceoName = ceoUser?.name || ceoUser?.username || '대표님'
+
     const approval = {
       id: Date.now(),
       approvalNumber: generateApprovalNumber(await dataService.getApprovals()),
@@ -93,9 +101,9 @@ export default function NewApproval() {
       attachmentData: null,
       status: 'pending',
       currentStep: 0,
-      totalSteps: site.steps,
-      approvers: [...site.approvers],
-      approvals: Array(site.steps).fill(null),
+      totalSteps: 2, // 항상 2단계: 본사 -> 대표님
+      approvers: [headquartersName, ceoName], // 1단계: 본사, 2단계: 대표님
+      approvals: Array(2).fill(null),
       createdAt: new Date().toISOString()
     }
 

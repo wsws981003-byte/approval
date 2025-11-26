@@ -16,6 +16,20 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
       const user = approvedUsers.find(u => u.username === currentUser.username)
       const approver = user?.name || currentUser.username
 
+      // 대표님이 본사 단계(0단계)를 건너뛰는 경우
+      if (currentUser.role === 'ceo' && approval.currentStep === 0) {
+        // 본사 단계를 자동으로 승인 처리
+        approval.approvals[0] = {
+          approver: '본사 (건너뜀)',
+          approvedAt: new Date().toISOString(),
+          status: 'approved',
+          skipped: true
+        }
+        // 대표님 단계로 바로 이동
+        approval.currentStep = 1
+      }
+
+      // 현재 단계 승인 처리
       approval.approvals[approval.currentStep] = {
         approver: approver,
         approvedAt: new Date().toISOString(),

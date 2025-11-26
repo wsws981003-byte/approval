@@ -100,11 +100,19 @@ export default function EditApprovalModal({ approval, onClose, onSuccess }) {
 
           // 반려된 결재인 경우 상태 초기화
           if (approval.status === 'rejected') {
+            // 본사 계정과 대표님 계정 찾기
+            const allApprovedUsers = await dataService.getApprovedUsers()
+            const headquartersUser = allApprovedUsers.find(u => u.role === 'headquarters')
+            const ceoUser = allApprovedUsers.find(u => u.role === 'ceo')
+            
+            const headquartersName = headquartersUser?.name || headquartersUser?.username || '본사'
+            const ceoName = ceoUser?.name || ceoUser?.username || '대표님'
+
             updates.status = 'pending'
             updates.currentStep = 0
-            updates.totalSteps = site.steps
-            updates.approvers = [...site.approvers]
-            updates.approvals = Array(site.steps).fill(null)
+            updates.totalSteps = 2 // 항상 2단계: 본사 -> 대표님
+            updates.approvers = [headquartersName, ceoName] // 1단계: 본사, 2단계: 대표님
+            updates.approvals = Array(2).fill(null)
             updates.rejectedAt = null
             updates.rejectionReason = null
           }
@@ -129,11 +137,19 @@ export default function EditApprovalModal({ approval, onClose, onSuccess }) {
 
         // 반려된 결재인 경우 상태 초기화
         if (approval.status === 'rejected') {
+          // 본사 계정과 대표님 계정 찾기
+          const allApprovedUsers = await dataService.getApprovedUsers()
+          const headquartersUser = allApprovedUsers.find(u => u.role === 'headquarters')
+          const ceoUser = allApprovedUsers.find(u => u.role === 'ceo')
+          
+          const headquartersName = headquartersUser?.name || headquartersUser?.username || '본사'
+          const ceoName = ceoUser?.name || ceoUser?.username || '대표님'
+
           updates.status = 'pending'
           updates.currentStep = 0
-          updates.totalSteps = site.steps
-          updates.approvers = [...site.approvers]
-          updates.approvals = Array(site.steps).fill(null)
+          updates.totalSteps = 2 // 항상 2단계: 본사 -> 대표님
+          updates.approvers = [headquartersName, ceoName] // 1단계: 본사, 2단계: 대표님
+          updates.approvals = Array(2).fill(null)
           updates.rejectedAt = null
           updates.rejectionReason = null
         }

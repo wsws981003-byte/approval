@@ -78,7 +78,11 @@ function PendingApprovalRow({ approval, currentUser, approvedUsers, onViewDetail
 
   const canUserApprove = () => {
     if (!currentUser) return false
-    // 대표님 계정만 결재 승인/반려 가능
+    // 본사 계정은 1단계(현재 단계가 0)에서만 승인 가능
+    if (currentUser.role === 'headquarters') {
+      return approval.currentStep === 0 && (approval.status === 'pending' || approval.status === 'processing')
+    }
+    // 대표님 계정은 항상 승인 가능 (본사 단계를 건너뛸 수 있음)
     if (currentUser.role === 'ceo') return true
     if (currentUser.role === 'admin_dept' || currentUser.role === 'other') return false
     if (currentUser.role === 'manager' || currentUser.role === 'site') {
