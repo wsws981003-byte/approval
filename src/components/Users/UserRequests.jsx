@@ -8,6 +8,7 @@ export default function UserRequests() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [editFormData, setEditFormData] = useState({})
+  const [showDeletedUsers, setShowDeletedUsers] = useState(false)
 
   useEffect(() => {
     syncData()
@@ -134,6 +135,29 @@ export default function UserRequests() {
     } catch (error) {
       console.error('복구 오류:', error)
       alert('복구 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handlePermanentDelete = async (username) => {
+    const deletedUser = deletedUsers.find(u => u.username === username)
+    if (!deletedUser) {
+      alert('삭제된 사용자를 찾을 수 없습니다.')
+      return
+    }
+
+    if (!window.confirm(`${deletedUser.name}(${username}) 사용자를 영구적으로 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) return
+
+    try {
+      const success = await dataService.permanentlyDeleteUser(username)
+      if (success) {
+        await syncData()
+        alert('사용자가 영구적으로 삭제되었습니다.')
+      } else {
+        alert('영구 삭제 중 오류가 발생했습니다.')
+      }
+    } catch (error) {
+      console.error('영구 삭제 오류:', error)
+      alert('영구 삭제 중 오류가 발생했습니다.')
     }
   }
 
@@ -292,51 +316,75 @@ export default function UserRequests() {
         </table>
       </div>
 
-      <h3 style={{ marginTop: '30px', marginBottom: '15px' }}>삭제된 사용자 목록</h3>
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>이름</th>
-              <th>역할</th>
-              <th>연락처</th>
-              <th>이메일</th>
-              <th>삭제일</th>
-              <th>삭제자</th>
-              <th>작업</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deletedUsers.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="empty-state">삭제된 사용자가 없습니다.</td>
-              </tr>
-            ) : (
-              deletedUsers.map(user => (
-                <tr key={user.username} style={{ opacity: 0.7 }}>
-                  <td>{user.username}</td>
-                  <td>{user.name}</td>
-                  <td>{getRoleText(user.role)}</td>
-                  <td>{user.phone || '-'}</td>
-                  <td>{user.email || '-'}</td>
-                  <td>{formatDate(user.deletedAt)}</td>
-                  <td>{user.deletedBy || '-'}</td>
-                  <td>
-                    <button
-                      className="btn btn-success"
-                      onClick={() => handleRestore(user.username)}
-                      style={{ padding: '5px 10px', fontSize: '14px' }}
-                    >
-                      복구
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div style={{ marginTop: '30px', marginBottom: '15px' }}>
+        <h3 
+          style={{ 
+            margin: 0, 
+            cursor: 'pointer', 
+            userSelect: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}
+          onClick={() => setShowDeletedUsers(!showDeletedUsers)}
+        >
+          <span style={{ fontSize: '1.2em' }}>{showDeletedUsers ? '▼' : '▶'}</span>
+          삭제된 사용자 목록 {deletedUsers.length > 0 && `(${deletedUsers.length})`}
+        </h3>
       </div>
+      {showDeletedUsers && (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>이름</th>
+                <th>역할</th>
+                <th>연락처</th>
+                <th>이메일</th>
+                <th>삭제일</th>
+                <th>삭제자</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deletedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="empty-state">삭제된 사용자가 없습니다.</td>
+                </tr>
+              ) : (
+                deletedUsers.map(user => (
+                  <tr key={user.username} style={{ opacity: 0.7 }}>
+                    <td>{user.username}</td>
+                    <td>{user.name}</td>
+                    <td>{getRoleText(user.role)}</td>
+                    <td>{user.phone || '-'}</td>
+                    <td>{user.email || '-'}</td>
+                    <td>{formatDate(user.deletedAt)}</td>
+                    <td>{user.deletedBy || '-'}</td>
+                    <td>
+                      <button
+                        className="btn btn-success"
+                        onClick={() => handleRestore(user.username)}
+                        style={{ padding: '5px 10px', fontSize: '14px' }}
+                      >
+                        복구
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => handlePermanentDelete(user.username)}
+                        style={{ padding: '5px 10px', fontSize: '14px', marginLeft: '5px' }}
+                      >
+                        영구 삭제
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {showEditModal && editingUser && (
         <div className="modal active" style={{ display: 'flex' }} onClick={(e) => e.target === e.currentTarget && setShowEditModal(false)}>
