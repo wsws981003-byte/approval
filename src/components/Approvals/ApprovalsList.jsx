@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { getStatusClass, getStatusText, formatDate } from '../../utils'
 import { exportToExcel } from '../../utils/excelExport'
+import ApprovalDetailModal from './ApprovalDetailModal'
+import ApprovalActions from './ApprovalActions'
 
 export default function ApprovalsList() {
-  const { approvals, currentUser, approvedUsers } = useApp()
+  const location = useLocation()
+  const { approvals, currentUser, approvedUsers, sites, syncData } = useApp()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState(location.state?.filterStatus || '')
   const [siteFilter, setSiteFilter] = useState('')
+  const [selectedApproval, setSelectedApproval] = useState(null)
+
+  useEffect(() => {
+    syncData()
+  }, [])
 
   const getFilteredApprovals = () => {
     let filtered = approvals.filter(approval => {
@@ -56,7 +65,11 @@ export default function ApprovalsList() {
         </select>
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           <option value="">전체 현장</option>
-          {/* 현장 목록은 sites에서 가져와야 함 */}
+          {sites.map(site => (
+            <option key={site.id} value={site.id}>
+              {site.name}
+            </option>
+          ))}
         </select>
       </div>
       <div className="table-container">
@@ -79,29 +92,85 @@ export default function ApprovalsList() {
               </tr>
             ) : (
               filtered.map(approval => (
-                <tr key={approval.id}>
-                  <td>{approval.approvalNumber || approval.id}</td>
-                  <td>{approval.title}</td>
-                  <td>{approval.siteName}</td>
-                  <td>{approval.author}</td>
-                  <td>
-                    <span className={`badge badge-${getStatusClass(approval.status)}`}>
-                      {getStatusText(approval.status)}
-                    </span>
-                  </td>
-                  <td>{formatDate(approval.createdAt)}</td>
-                  <td>
-                    <button className="btn btn-primary" style={{ padding: '5px 10px', fontSize: '14px' }}>
-                      상세
-                    </button>
-                  </td>
-                </tr>
+                <ApprovalRow
+                  key={approval.id}
+                  approval={approval}
+                  currentUser={currentUser}
+                  approvedUsers={approvedUsers}
+                  onViewDetail={() => setSelectedApproval(approval.id)}
+                  onActionComplete={syncData}
+                />
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {selectedApproval && (
+        <ApprovalDetailModal
+          approvalId={selectedApproval}
+          onClose={() => setSelectedApproval(null)}
+        />
+      )}
     </div>
+  )
+}
+
+function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onActionComplete }) {
+  const { sites, hasPermission, isSiteManager } = useApp()
+
+  const canUserApprove = () => {
+    if (!currentUser) return false
+    if (currentUser.role === 'ceo' || currentUser.role === 'headquarters') return true
+    if (currentUser.role === 'admin_dept' || currentUser.role === 'other') return false
+    if (currentUser.role === 'manager' || currentUser.role === 'site') {
+      return isSiteManager(approval.siteId)
+    }
+    return false
+  }
+
+  const canEdit = () => {
+    if (!currentUser) return false
+    return approval.author === currentUser.username && 
+           (approval.status === 'pending' || approval.status === 'processing' || approval.status === 'rejected')
+  }
+
+  const canDelete = () => {
+    if (!currentUser) return false
+    if (currentUser.role === 'ceo' || currentUser.role === 'headquarters') return true
+    return approval.author === currentUser.username && 
+           (approval.status === 'pending' || approval.status === 'processing')
+  }
+
+  const showActions = (approval.status === 'pending' || approval.status === 'processing') && canUserApprove()
+  const canCancelRejection = approval.status === 'rejected' && 
+                            currentUser && 
+                            (currentUser.role === 'ceo' || currentUser.role === 'headquarters')
+
+  return (
+    <tr>
+      <td>{approval.approvalNumber || approval.id}</td>
+      <td>{approval.title}</td>
+      <td>{approval.siteName}</td>
+      <td>{approval.author}</td>
+      <td>
+        <span className={`badge badge-${getStatusClass(approval.status)}`}>
+          {getStatusText(approval.status)}
+        </span>
+      </td>
+      <td>{formatDate(approval.createdAt)}</td>
+      <td>
+        <ApprovalActions
+          approval={approval}
+          showActions={showActions}
+          canEdit={canEdit()}
+          canDelete={canDelete()}
+          canCancelRejection={canCancelRejection}
+          onViewDetail={onViewDetail}
+          onActionComplete={onActionComplete}
+        />
+      </td>
+    </tr>
   )
 }
 
