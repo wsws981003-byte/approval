@@ -254,7 +254,7 @@ async function rejectUserRequest(requestId) {
 }
 
 // 승인된 사용자 삭제
-function removeApprovedUser(username) {
+async function removeApprovedUser(username) {
     // 기본 대표님 계정은 삭제 불가
     if (username === 'admin') {
         alert('기본 대표님 계정(admin)은 삭제할 수 없습니다.');
@@ -270,19 +270,29 @@ function removeApprovedUser(username) {
                 deletedAt: new Date().toISOString(),
                 deletedBy: currentUser ? currentUser.username : 'system'
             };
-            deletedUsers.push(deletedUser);
-            localStorage.setItem('deletedUsers', JSON.stringify(deletedUsers));
+            
+            // Supabase 또는 localStorage에 저장
+            if (typeof dataService !== 'undefined' && dataService.storageType === 'supabase') {
+                // 삭제된 사용자 테이블에 저장
+                await dataService.saveDeletedUser(deletedUser);
+                // 승인된 사용자 테이블에서 삭제
+                await dataService.deleteApprovedUser(username);
+                await syncData();
+            } else {
+                deletedUsers.push(deletedUser);
+                localStorage.setItem('deletedUsers', JSON.stringify(deletedUsers));
+                approvedUsers = approvedUsers.filter(u => u.username !== username);
+                localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
+            }
+            
+            await loadUserRequests();
+            alert('사용자가 삭제되었습니다.');
         }
-        
-        approvedUsers = approvedUsers.filter(u => u.username !== username);
-        localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
-        loadUserRequests();
-        alert('사용자가 삭제되었습니다.');
     }
 }
 
 // 삭제된 사용자 복구
-function restoreDeletedUser(username) {
+async function restoreDeletedUser(username) {
     const deletedUser = deletedUsers.find(u => u.username === username);
     if (!deletedUser) {
         alert('삭제된 사용자를 찾을 수 없습니다.');
@@ -309,24 +319,40 @@ function restoreDeletedUser(username) {
             approvedBy: deletedUser.approvedBy || 'system'
         };
         
-        approvedUsers.push(restoredUser);
-        localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
+        // Supabase 또는 localStorage에 저장
+        if (typeof dataService !== 'undefined' && dataService.storageType === 'supabase') {
+            // 승인된 사용자 테이블에 저장
+            await dataService.saveApprovedUser(restoredUser);
+            // 삭제된 사용자 테이블에서 제거
+            await dataService.permanentlyDeleteUser(username);
+            await syncData();
+        } else {
+            approvedUsers.push(restoredUser);
+            localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers));
+            
+            // 삭제된 사용자 목록에서 제거
+            deletedUsers = deletedUsers.filter(u => u.username !== username);
+            localStorage.setItem('deletedUsers', JSON.stringify(deletedUsers));
+        }
         
-        // 삭제된 사용자 목록에서 제거
-        deletedUsers = deletedUsers.filter(u => u.username !== username);
-        localStorage.setItem('deletedUsers', JSON.stringify(deletedUsers));
-        
-        loadUserRequests();
+        await loadUserRequests();
         alert('사용자가 복구되었습니다.');
     }
 }
 
 // 사용자 영구 삭제
-function permanentlyDeleteUser(username) {
+async function permanentlyDeleteUser(username) {
     if (confirm(`${username} 사용자를 영구적으로 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
-        deletedUsers = deletedUsers.filter(u => u.username !== username);
-        localStorage.setItem('deletedUsers', JSON.stringify(deletedUsers));
-        loadUserRequests();
+        // Supabase 또는 localStorage에서 삭제
+        if (typeof dataService !== 'undefined' && dataService.storageType === 'supabase') {
+            await dataService.permanentlyDeleteUser(username);
+            await syncData();
+        } else {
+            deletedUsers = deletedUsers.filter(u => u.username !== username);
+            localStorage.setItem('deletedUsers', JSON.stringify(deletedUsers));
+        }
+        
+        await loadUserRequests();
         alert('사용자가 영구적으로 삭제되었습니다.');
     }
 }

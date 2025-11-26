@@ -3,3 +3,7 @@ INSERT INTO approved_users (username, password, role, name, approved_at, approve
 VALUES ('admin', 'admin123', 'ceo', '대표님', NOW(), 'system')
 ON CONFLICT (username) DO NOTHING;
 
+
+
+
+
