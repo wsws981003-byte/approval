@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { dataService } from '../../services/dataService'
+import EditApprovalModal from './EditApprovalModal'
 
 export default function ApprovalActions({ approval, showActions, canEdit, canDelete, canCancelRejection, onViewDetail, onActionComplete }) {
   const { currentUser, approvedUsers, syncData } = useApp()
   const [loading, setLoading] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const handleApprove = async () => {
     if (!window.confirm('이 결재를 승인하시겠습니까?')) return
@@ -134,7 +136,7 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
       {canEdit && (
         <button
           className="btn btn-info"
-          onClick={() => {/* TODO: 수정 모달 열기 */}}
+          onClick={() => setShowEditModal(true)}
           style={{ padding: '5px 10px', fontSize: '14px', background: '#17a2b8', color: 'white' }}
         >
           수정
@@ -158,6 +160,14 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
         >
           반려 취소
         </button>
+      )}
+
+      {showEditModal && (
+        <EditApprovalModal
+          approval={approval}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={onActionComplete}
+        />
       )}
     </div>
   )

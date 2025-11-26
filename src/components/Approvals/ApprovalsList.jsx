@@ -5,6 +5,7 @@ import { getStatusClass, getStatusText, formatDate } from '../../utils'
 import { exportToExcel } from '../../utils/excelExport'
 import ApprovalDetailModal from './ApprovalDetailModal'
 import ApprovalActions from './ApprovalActions'
+import AdvancedSearchModal from './AdvancedSearchModal'
 
 export default function ApprovalsList() {
   const location = useLocation()
@@ -13,12 +14,19 @@ export default function ApprovalsList() {
   const [statusFilter, setStatusFilter] = useState(location.state?.filterStatus || '')
   const [siteFilter, setSiteFilter] = useState('')
   const [selectedApproval, setSelectedApproval] = useState(null)
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
+  const [advancedSearchResults, setAdvancedSearchResults] = useState(null)
 
   useEffect(() => {
     syncData()
   }, [])
 
   const getFilteredApprovals = () => {
+    // 고급 검색 결과가 있으면 그것을 사용
+    if (advancedSearchResults) {
+      return advancedSearchResults
+    }
+
     let filtered = approvals.filter(approval => {
       const matchSearch = !search || approval.title.toLowerCase().includes(search.toLowerCase())
       const matchStatus = !statusFilter || approval.status === statusFilter
@@ -40,6 +48,10 @@ export default function ApprovalsList() {
   }
 
   const filtered = getFilteredApprovals()
+
+  const handleClearAdvancedSearch = () => {
+    setAdvancedSearchResults(null)
+  }
 
   return (
     <div>
@@ -71,7 +83,29 @@ export default function ApprovalsList() {
             </option>
           ))}
         </select>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowAdvancedSearch(true)}
+          style={{ padding: '10px 20px' }}
+        >
+          🔍 고급 검색
+        </button>
+        {advancedSearchResults && (
+          <button
+            className="btn btn-secondary"
+            onClick={handleClearAdvancedSearch}
+            style={{ padding: '10px 20px' }}
+          >
+            검색 해제
+          </button>
+        )}
       </div>
+      {advancedSearchResults && (
+        <div style={{ margin: '15px 0', padding: '10px', background: '#e3f2fd', borderRadius: '8px' }}>
+          <span style={{ fontWeight: 600, color: '#1976d2' }}>🔍 고급 검색 결과: </span>
+          <span style={{ color: '#1976d2' }}>{advancedSearchResults.length}건</span>
+        </div>
+      )}
       <div className="table-container">
         <table>
           <thead>
@@ -110,6 +144,16 @@ export default function ApprovalsList() {
         <ApprovalDetailModal
           approvalId={selectedApproval}
           onClose={() => setSelectedApproval(null)}
+        />
+      )}
+
+      {showAdvancedSearch && (
+        <AdvancedSearchModal
+          onClose={() => setShowAdvancedSearch(false)}
+          onSearch={(results) => {
+            setAdvancedSearchResults(results)
+            setShowAdvancedSearch(false)
+          }}
         />
       )}
     </div>
