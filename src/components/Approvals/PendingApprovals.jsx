@@ -78,7 +78,8 @@ function PendingApprovalRow({ approval, currentUser, approvedUsers, onViewDetail
 
   const canUserApprove = () => {
     if (!currentUser) return false
-    if (currentUser.role === 'ceo' || currentUser.role === 'headquarters') return true
+    // 대표님 계정만 결재 승인/반려 가능
+    if (currentUser.role === 'ceo') return true
     if (currentUser.role === 'admin_dept' || currentUser.role === 'other') return false
     if (currentUser.role === 'manager' || currentUser.role === 'site') {
       return isSiteManager(approval.siteId)
@@ -94,7 +95,8 @@ function PendingApprovalRow({ approval, currentUser, approvedUsers, onViewDetail
 
   const canDelete = () => {
     if (!currentUser) return false
-    if (currentUser.role === 'ceo' || currentUser.role === 'headquarters') return true
+    // 대표님 계정만 삭제 가능
+    if (currentUser.role === 'ceo') return true
     return approval.author === currentUser.username && 
            (approval.status === 'pending' || approval.status === 'processing')
   }

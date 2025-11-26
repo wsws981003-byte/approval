@@ -246,7 +246,8 @@ function DateQueryRow({ approval, currentUser, approvedUsers, onViewDetail, onAc
 
   const canUserApprove = () => {
     if (!currentUser) return false
-    if (currentUser.role === 'ceo' || currentUser.role === 'headquarters') return true
+    // 대표님 계정만 결재 승인/반려 가능
+    if (currentUser.role === 'ceo') return true
     if (currentUser.role === 'admin_dept' || currentUser.role === 'other') return false
     if (currentUser.role === 'manager' || currentUser.role === 'site') {
       return isSiteManager(approval.siteId)
@@ -257,7 +258,7 @@ function DateQueryRow({ approval, currentUser, approvedUsers, onViewDetail, onAc
   const showActions = (approval.status === 'pending' || approval.status === 'processing') && canUserApprove()
   const canCancelRejection = approval.status === 'rejected' && 
                             currentUser && 
-                            (currentUser.role === 'ceo' || currentUser.role === 'headquarters')
+                            currentUser.role === 'ceo'
 
   return (
     <tr>
