@@ -590,6 +590,27 @@ class DataService {
     }
   }
 
+  // 삭제된 사용자 삭제 (복구 시 사용)
+  async deleteDeletedUser(username) {
+    if (this.storageType === 'supabase' && this.supabase) {
+      const { error } = await this.supabase
+        .from('deleted_users')
+        .delete()
+        .eq('username', username)
+      
+      if (error) {
+        console.error('Supabase 삭제된 사용자 삭제 오류:', error)
+        return false
+      }
+      return true
+    } else {
+      const deletedUsers = JSON.parse(localStorage.getItem('deletedUsers')) || []
+      const filtered = deletedUsers.filter(u => u.username !== username)
+      localStorage.setItem('deletedUsers', JSON.stringify(filtered))
+      return true
+    }
+  }
+
   // 삭제된 사용자 영구 삭제
   async permanentlyDeleteUser(username) {
     if (this.storageType === 'supabase' && this.supabase) {

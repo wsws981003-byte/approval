@@ -36,6 +36,18 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
         approvals: approval.approvals
       })
 
+      // 승인 완료 알림 생성
+      if (approval.status === 'approved') {
+        await dataService.saveNotification({
+          type: 'approved',
+          title: '결재 승인 완료',
+          message: `"${approval.title}" 결재가 승인되었습니다.`,
+          approvalId: approval.id,
+          userId: approval.author,
+          read: false
+        })
+      }
+
       await syncData()
       if (onActionComplete) onActionComplete()
       alert('승인되었습니다.')
@@ -76,6 +88,16 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
         approvals: approval.approvals
       })
 
+      // 반려 알림 생성
+      await dataService.saveNotification({
+        type: 'rejected',
+        title: '결재 반려',
+        message: `"${approval.title}" 결재가 반려되었습니다.`,
+        approvalId: approval.id,
+        userId: approval.author,
+        read: false
+      })
+
       await syncData()
       if (onActionComplete) onActionComplete()
       alert('반려되었습니다.')
@@ -99,6 +121,38 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
     } catch (error) {
       console.error('삭제 오류:', error)
       alert('삭제 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancelRejection = async () => {
+    if (!window.confirm('반려를 취소하고 결재를 다시 진행 상태로 변경하시겠습니까?')) return
+
+    setLoading(true)
+    try {
+      // 반려 상태를 pending으로 변경하고 반려 정보 초기화
+      const updates = {
+        status: 'pending',
+        currentStep: 0,
+        rejectedAt: null,
+        rejectionReason: null,
+        approvals: approval.approvals.map((app, idx) => {
+          // 현재 단계의 반려 정보만 제거
+          if (idx === approval.currentStep && app && app.status === 'rejected') {
+            return null
+          }
+          return app
+        })
+      }
+
+      await dataService.updateApproval(approval.id, updates)
+      await syncData()
+      if (onActionComplete) onActionComplete()
+      alert('반려가 취소되었고 결재가 다시 진행 상태로 변경되었습니다.')
+    } catch (error) {
+      console.error('반려 취소 오류:', error)
+      alert('반려 취소 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
@@ -155,7 +209,8 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
       {canCancelRejection && (
         <button
           className="btn btn-success"
-          onClick={() => {/* TODO: 반려 취소 */}}
+          onClick={handleCancelRejection}
+          disabled={loading}
           style={{ padding: '5px 10px', fontSize: '14px' }}
         >
           반려 취소

@@ -33,7 +33,7 @@ export default function MyInfo() {
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'phone') {
-      const formatted = formatPhoneNumber({ value } as any)
+      const formatted = formatPhoneNumber(value)
       setFormData(prev => ({ ...prev, [name]: formatted || value }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))

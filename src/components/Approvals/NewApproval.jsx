@@ -107,6 +107,37 @@ export default function NewApproval() {
 
           const saved = await dataService.saveApproval(approval)
           if (saved) {
+            // 승인 권한이 있는 사용자들에게 알림 생성
+            const allApprovedUsers = await dataService.getApprovedUsers()
+            const ceoUsers = allApprovedUsers.filter(u => (u.role === 'ceo' || u.role === 'headquarters') && u.username !== approval.author)
+            
+            for (const ceo of ceoUsers) {
+              await dataService.saveNotification({
+                type: 'pending',
+                title: '결재 승인 대기',
+                message: `"${approval.title}" 결재가 승인을 기다리고 있습니다.`,
+                approvalId: saved.id || approval.id,
+                userId: ceo.username,
+                read: false
+              })
+            }
+
+            // 현장 담당자에게도 알림
+            const site = sites.find(s => s.id === approval.siteId)
+            if (site && site.manager) {
+              const managerUser = allApprovedUsers.find(u => u.username === site.manager)
+              if (managerUser && managerUser.username !== approval.author) {
+                await dataService.saveNotification({
+                  type: 'pending',
+                  title: '결재 승인 대기',
+                  message: `"${approval.title}" 결재가 승인을 기다리고 있습니다.`,
+                  approvalId: saved.id || approval.id,
+                  userId: managerUser.username,
+                  read: false
+                })
+              }
+            }
+
             await syncData()
             alert('결재가 제출되었습니다.')
             navigate('/approvals')
@@ -123,6 +154,37 @@ export default function NewApproval() {
       } else {
         const saved = await dataService.saveApproval(approval)
         if (saved) {
+          // 승인 권한이 있는 사용자들에게 알림 생성
+          const allApprovedUsers = await dataService.getApprovedUsers()
+          const ceoUsers = allApprovedUsers.filter(u => (u.role === 'ceo' || u.role === 'headquarters') && u.username !== approval.author)
+          
+          for (const ceo of ceoUsers) {
+            await dataService.saveNotification({
+              type: 'pending',
+              title: '결재 승인 대기',
+              message: `"${approval.title}" 결재가 승인을 기다리고 있습니다.`,
+              approvalId: saved.id || approval.id,
+              userId: ceo.username,
+              read: false
+            })
+          }
+
+          // 현장 담당자에게도 알림
+          const site = sites.find(s => s.id === approval.siteId)
+          if (site && site.manager) {
+            const managerUser = allApprovedUsers.find(u => u.username === site.manager)
+            if (managerUser && managerUser.username !== approval.author) {
+              await dataService.saveNotification({
+                type: 'pending',
+                title: '결재 승인 대기',
+                message: `"${approval.title}" 결재가 승인을 기다리고 있습니다.`,
+                approvalId: saved.id || approval.id,
+                userId: managerUser.username,
+                read: false
+              })
+            }
+          }
+
           await syncData()
           alert('결재가 제출되었습니다.')
           navigate('/approvals')

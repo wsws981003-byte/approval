@@ -285,7 +285,7 @@ export default function BackupViewer() {
 
       {selectedApproval && backupData && (
         <ApprovalDetailModal
-          approvalId={selectedApproval}
+          approval={backupData.approvals.find(a => a.id === selectedApproval)}
           onClose={() => setSelectedApproval(null)}
         />
       )}

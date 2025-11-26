@@ -57,8 +57,11 @@ function AppRoutes() {
 }
 
 function App() {
+  // 프로덕션 모드에서만 /approval basename 사용
+  const basename = import.meta.env.PROD ? '/approval' : ''
+  
   return (
-    <BrowserRouter basename="/approval">
+    <BrowserRouter basename={basename}>
       <AppProvider>
         <AppRoutes />
       </AppProvider>

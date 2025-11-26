@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import { getStatusClass, getStatusText, formatDate } from '../../utils'
 
-export default function ApprovalDetailModal({ approvalId, onClose }) {
+export default function ApprovalDetailModal({ approvalId, approval: approvalProp, onClose }) {
   const { approvals, sites } = useApp()
-  const [approval, setApproval] = useState(null)
+  const [approval, setApproval] = useState(approvalProp || null)
 
   useEffect(() => {
-    const found = approvals.find(a => a.id === approvalId)
-    setApproval(found)
-  }, [approvalId, approvals])
+    if (approvalProp) {
+      setApproval(approvalProp)
+    } else if (approvalId) {
+      const found = approvals.find(a => a.id === approvalId)
+      setApproval(found)
+    }
+  }, [approvalId, approvalProp, approvals])
 
   if (!approval) return null
 
