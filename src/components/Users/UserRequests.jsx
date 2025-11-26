@@ -9,12 +9,40 @@ export default function UserRequests() {
   const [editingUser, setEditingUser] = useState(null)
   const [editFormData, setEditFormData] = useState({})
   const [showDeletedUsers, setShowDeletedUsers] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
 
   useEffect(() => {
     syncData()
   }, [])
 
   const pendingRequests = userRequests.filter(r => r.status === 'pending')
+
+  // 승인된 사용자 목록 필터링
+  const getFilteredApprovedUsers = () => {
+    let filtered = approvedUsers
+
+    // 검색어 필터링
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(user => 
+        user.username?.toLowerCase().includes(query) ||
+        user.name?.toLowerCase().includes(query) ||
+        user.phone?.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query) ||
+        getRoleText(user.role)?.toLowerCase().includes(query)
+      )
+    }
+
+    // 역할 필터링
+    if (roleFilter) {
+      filtered = filtered.filter(user => user.role === roleFilter)
+    }
+
+    return filtered
+  }
+
+  const filteredApprovedUsers = getFilteredApprovedUsers()
 
   const handleApprove = async (requestId) => {
     const request = userRequests.find(r => r.id === requestId)
@@ -259,6 +287,46 @@ export default function UserRequests() {
       </div>
 
       <h3 style={{ marginTop: '30px', marginBottom: '15px' }}>승인된 사용자 목록</h3>
+      <div className="filter-bar" style={{ marginBottom: '15px' }}>
+        <input
+          type="text"
+          placeholder="ID, 이름, 연락처, 이메일 검색..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ flex: 1, padding: '10px', fontSize: '14px', border: '1px solid #ddd', borderRadius: '4px' }}
+        />
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          style={{ padding: '10px', fontSize: '14px', border: '1px solid #ddd', borderRadius: '4px', marginLeft: '10px' }}
+        >
+          <option value="">전체 역할</option>
+          <option value="ceo">대표님</option>
+          <option value="headquarters">본사</option>
+          <option value="site">현장</option>
+          <option value="manager">현장소장</option>
+          <option value="other">기타</option>
+        </select>
+        {(searchQuery || roleFilter) && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setSearchQuery('')
+              setRoleFilter('')
+            }}
+            style={{ padding: '10px 20px', marginLeft: '10px' }}
+          >
+            필터 초기화
+          </button>
+        )}
+      </div>
+      {filteredApprovedUsers.length !== approvedUsers.length && (
+        <div style={{ marginBottom: '15px', padding: '10px', background: '#e3f2fd', borderRadius: '8px' }}>
+          <span style={{ fontWeight: 600, color: '#1976d2' }}>
+            검색 결과: {filteredApprovedUsers.length}명 / 전체 {approvedUsers.length}명
+          </span>
+        </div>
+      )}
       <div className="table-container">
         <table>
           <thead>
@@ -273,12 +341,16 @@ export default function UserRequests() {
             </tr>
           </thead>
           <tbody>
-            {approvedUsers.length === 0 ? (
+            {filteredApprovedUsers.length === 0 ? (
               <tr>
-                <td colSpan="7" className="empty-state">승인된 사용자가 없습니다.</td>
+                <td colSpan="7" className="empty-state">
+                  {approvedUsers.length === 0 
+                    ? '승인된 사용자가 없습니다.' 
+                    : '검색 결과가 없습니다.'}
+                </td>
               </tr>
             ) : (
-              approvedUsers.map(user => {
+              filteredApprovedUsers.map(user => {
                 const isDefaultAdmin = user.username === 'admin' && user.role === 'ceo'
                 const isCEO = currentUser && currentUser.role === 'ceo'
                 return (
