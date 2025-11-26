@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
+import { dataService } from '../../services/dataService'
 import { getStatusClass, getStatusText, formatDate } from '../../utils'
 import { exportToExcel } from '../../utils/excelExport'
 import ApprovalDetailModal from './ApprovalDetailModal'
@@ -13,13 +14,25 @@ export default function ApprovalsList() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState(location.state?.filterStatus || '')
   const [siteFilter, setSiteFilter] = useState('')
+  const [deletedFilter, setDeletedFilter] = useState('all') // 'all', 'active', 'deleted'
+  const [deletedApprovals, setDeletedApprovals] = useState([])
   const [selectedApproval, setSelectedApproval] = useState(null)
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
   const [advancedSearchResults, setAdvancedSearchResults] = useState(null)
 
   useEffect(() => {
     syncData()
+    loadDeletedApprovals()
   }, [])
+
+  const loadDeletedApprovals = async () => {
+    try {
+      const data = await dataService.getDeletedApprovals()
+      setDeletedApprovals(data)
+    } catch (error) {
+      console.error('삭제된 결재 조회 오류:', error)
+    }
+  }
 
   const getFilteredApprovals = () => {
     // 고급 검색 결과가 있으면 그것을 사용
@@ -27,7 +40,36 @@ export default function ApprovalsList() {
       return advancedSearchResults
     }
 
-    let filtered = approvals.filter(approval => {
+    // 활성 결재와 삭제된 결재 합치기
+    let allApprovals = [...approvals]
+    
+    // 삭제된 결재 필터링
+    let filteredDeleted = deletedApprovals.filter(approval => {
+      const matchSearch = !search || 
+        approval.title.toLowerCase().includes(search.toLowerCase()) ||
+        approval.author.toLowerCase().includes(search.toLowerCase()) ||
+        (approval.approvalNumber && approval.approvalNumber.toLowerCase().includes(search.toLowerCase()))
+      const matchStatus = !statusFilter || approval.status === statusFilter
+      const matchSite = !siteFilter || approval.siteId === parseInt(siteFilter)
+      return matchSearch && matchStatus && matchSite
+    })
+
+    // 현장 소장과 현장 계정은 자신이 작성한 결재만 볼 수 있음
+    if (currentUser && (currentUser.role === 'manager' || currentUser.role === 'site')) {
+      const user = approvedUsers.find(u => u.username === currentUser.username)
+      const userName = user ? user.name : null
+      
+      filteredDeleted = filteredDeleted.filter(approval => {
+        return approval.author === currentUser.username || 
+               (userName && approval.author === userName)
+      })
+    }
+
+    // 삭제된 결재에 isDeleted 플래그 추가
+    filteredDeleted = filteredDeleted.map(a => ({ ...a, isDeleted: true }))
+
+    // 활성 결재 필터링
+    let filteredActive = approvals.filter(approval => {
       const matchSearch = !search || approval.title.toLowerCase().includes(search.toLowerCase())
       const matchStatus = !statusFilter || approval.status === statusFilter
       const matchSite = !siteFilter || approval.siteId === parseInt(siteFilter)
@@ -38,13 +80,30 @@ export default function ApprovalsList() {
       const user = approvedUsers.find(u => u.username === currentUser.username)
       const userName = user ? user.name : null
       
-      filtered = filtered.filter(approval => {
+      filteredActive = filteredActive.filter(approval => {
         return approval.author === currentUser.username || 
                (userName && approval.author === userName)
       })
     }
 
-    return filtered
+    // 삭제 필터에 따라 반환
+    if (deletedFilter === 'deleted') {
+      return filteredDeleted.sort((a, b) => {
+        const dateA = new Date(a.deletedAt || a.createdAt)
+        const dateB = new Date(b.deletedAt || b.createdAt)
+        return dateB - dateA
+      })
+    } else if (deletedFilter === 'active') {
+      return filteredActive
+    } else {
+      // 전체: 활성 + 삭제된 결재 합치기
+      const combined = [...filteredActive, ...filteredDeleted]
+      return combined.sort((a, b) => {
+        const dateA = new Date(a.deletedAt || a.createdAt)
+        const dateB = new Date(b.deletedAt || b.createdAt)
+        return dateB - dateA
+      })
+    }
   }
 
   const filtered = getFilteredApprovals()
@@ -82,6 +141,11 @@ export default function ApprovalsList() {
             </option>
           ))}
         </select>
+        <select value={deletedFilter} onChange={(e) => setDeletedFilter(e.target.value)}>
+          <option value="all">전체</option>
+          <option value="active">활성 결재</option>
+          <option value="deleted">삭제된 결재</option>
+        </select>
         <button
           className="btn btn-primary"
           onClick={() => setShowAdvancedSearch(true)}
@@ -115,13 +179,15 @@ export default function ApprovalsList() {
               <th>작성자</th>
               <th>상태</th>
               <th>작성일</th>
+              {deletedFilter === 'all' || deletedFilter === 'deleted' ? <th>삭제일</th> : null}
+              {deletedFilter === 'all' || deletedFilter === 'deleted' ? <th>삭제자</th> : null}
               <th>작업</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan="7" className="empty-state">결재 내역이 없습니다.</td>
+                <td colSpan={deletedFilter === 'all' || deletedFilter === 'deleted' ? 9 : 7} className="empty-state">결재 내역이 없습니다.</td>
               </tr>
             ) : (
               filtered.map(approval => (
@@ -130,8 +196,12 @@ export default function ApprovalsList() {
                   approval={approval}
                   currentUser={currentUser}
                   approvedUsers={approvedUsers}
+                  showDeletedInfo={deletedFilter === 'all' || deletedFilter === 'deleted'}
                   onViewDetail={() => setSelectedApproval(approval.id)}
-                  onActionComplete={syncData}
+                  onActionComplete={() => {
+                    syncData()
+                    loadDeletedApprovals()
+                  }}
                 />
               ))
             )}
@@ -159,11 +229,12 @@ export default function ApprovalsList() {
   )
 }
 
-function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onActionComplete }) {
+function ApprovalRow({ approval, currentUser, approvedUsers, showDeletedInfo, onViewDetail, onActionComplete }) {
   const { sites, hasPermission, isSiteManager } = useApp()
+  const isDeleted = approval.isDeleted || false
 
   const canUserApprove = () => {
-    if (!currentUser) return false
+    if (!currentUser || isDeleted) return false
     // 대표님 계정만 결재 승인/반려 가능
     if (currentUser.role === 'ceo') return true
     if (currentUser.role === 'admin_dept' || currentUser.role === 'other') return false
@@ -174,7 +245,7 @@ function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onAct
   }
 
   const canEdit = () => {
-    if (!currentUser) return false
+    if (!currentUser || isDeleted) return false
     // 작성자만 수정 가능 (username 또는 name으로 매칭)
     const user = approvedUsers.find(u => u.username === currentUser.username)
     const userName = user ? user.name : null
@@ -185,7 +256,7 @@ function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onAct
   }
 
   const canDelete = () => {
-    if (!currentUser) return false
+    if (!currentUser || isDeleted) return false
     // 대표님 계정과 본사 계정은 삭제 가능
     if (currentUser.role === 'ceo' || currentUser.role === 'headquarters') return true
     return approval.author === currentUser.username && 
@@ -195,12 +266,16 @@ function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onAct
   const showActions = (approval.status === 'pending' || approval.status === 'processing') && canUserApprove()
   const canCancelRejection = approval.status === 'rejected' && 
                             currentUser && 
-                            currentUser.role === 'ceo'
+                            currentUser.role === 'ceo' &&
+                            !isDeleted
 
   return (
-    <tr>
+    <tr style={{ opacity: isDeleted ? 0.7 : 1 }}>
       <td>{approval.approvalNumber || approval.id}</td>
-      <td>{approval.title}</td>
+      <td>
+        {approval.title}
+        {isDeleted && <span style={{ marginLeft: '8px', color: '#999', fontSize: '12px' }}>(삭제됨)</span>}
+      </td>
       <td>{approval.siteName}</td>
       <td>{approval.author}</td>
       <td>
@@ -209,16 +284,32 @@ function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onAct
         </span>
       </td>
       <td>{formatDate(approval.createdAt)}</td>
+      {showDeletedInfo && (
+        <>
+          <td>{approval.deletedAt ? formatDate(approval.deletedAt) : '-'}</td>
+          <td>{approval.deletedBy || '-'}</td>
+        </>
+      )}
       <td>
-        <ApprovalActions
-          approval={approval}
-          showActions={showActions}
-          canEdit={canEdit()}
-          canDelete={canDelete()}
-          canCancelRejection={canCancelRejection}
-          onViewDetail={onViewDetail}
-          onActionComplete={onActionComplete}
-        />
+        {isDeleted ? (
+          <button
+            className="btn btn-primary"
+            onClick={onViewDetail}
+            style={{ padding: '5px 10px', fontSize: '14px' }}
+          >
+            상세
+          </button>
+        ) : (
+          <ApprovalActions
+            approval={approval}
+            showActions={showActions}
+            canEdit={canEdit()}
+            canDelete={canDelete()}
+            canCancelRejection={canCancelRejection}
+            onViewDetail={onViewDetail}
+            onActionComplete={onActionComplete}
+          />
+        )}
       </td>
     </tr>
   )

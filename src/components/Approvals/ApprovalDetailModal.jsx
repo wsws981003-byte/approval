@@ -86,6 +86,13 @@ export default function ApprovalDetailModal({ approvalId, approval: approvalProp
             <p><strong>작성자:</strong> {approval.author}</p>
             <p><strong>작성일:</strong> {formatDate(approval.createdAt)}</p>
             <p><strong>상태:</strong> <span className={`badge badge-${getStatusClass(approval.status)}`}>{getStatusText(approval.status)}</span></p>
+            {approval.deletedAt && (
+              <>
+                <p><strong>삭제일:</strong> {formatDate(approval.deletedAt)}</p>
+                <p><strong>삭제자:</strong> {approval.deletedBy || '-'}</p>
+                <p style={{ color: '#dc3545', fontWeight: 'bold' }}>⚠️ 이 결재는 삭제되었습니다.</p>
+              </>
+            )}
           </div>
           <div style={{ marginBottom: '20px' }}>
             <strong>내용:</strong>
