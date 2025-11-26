@@ -249,7 +249,25 @@ class DataService {
   }
 
   // 결재 데이터 삭제
-  async deleteApproval(approvalId) {
+  async deleteApproval(approvalId, deletedBy = null) {
+    // 먼저 삭제할 결재 데이터 가져오기
+    const approvals = await this.getApprovals()
+    const approvalToDelete = approvals.find(a => a.id === approvalId)
+    
+    if (!approvalToDelete) {
+      console.error('삭제할 결재를 찾을 수 없습니다.')
+      return false
+    }
+
+    // 삭제된 결재로 저장
+    const deletedApproval = {
+      ...approvalToDelete,
+      deletedAt: new Date().toISOString(),
+      deletedBy: deletedBy || null
+    }
+    await this.saveDeletedApproval(deletedApproval)
+
+    // 원본 결재 삭제
     if (this.storageType === 'supabase' && this.supabase) {
       const { error } = await this.supabase
         .from('approvals')
@@ -262,10 +280,96 @@ class DataService {
       }
       return true
     } else {
-      const approvals = JSON.parse(localStorage.getItem('approvals')) || []
       const filtered = approvals.filter(a => a.id !== approvalId)
       localStorage.setItem('approvals', JSON.stringify(filtered))
       return true
+    }
+  }
+
+  // 삭제된 결재 데이터 가져오기
+  async getDeletedApprovals() {
+    if (this.storageType === 'supabase' && this.supabase) {
+      const { data, error } = await this.supabase
+        .from('deleted_approvals')
+        .select('*')
+        .order('deleted_at', { ascending: false })
+      
+      if (error) {
+        console.error('Supabase 삭제된 결재 조회 오류:', error)
+        return []
+      }
+      
+      return (data || []).map(approval => ({
+        id: approval.id,
+        approvalNumber: approval.approval_number,
+        title: approval.title,
+        siteId: approval.site_id,
+        siteName: approval.site_name,
+        author: approval.author,
+        content: approval.content,
+        attachment: null,
+        attachmentFileName: approval.attachment_file_name,
+        attachmentData: approval.attachment_data,
+        status: approval.status,
+        currentStep: approval.current_step,
+        totalSteps: approval.total_steps,
+        approvers: approval.approvers || [],
+        approvals: approval.approvals || [],
+        rejectedAt: approval.rejected_at,
+        rejectionReason: approval.rejection_reason,
+        updatedAt: approval.updated_at,
+        originalCreatedAt: approval.original_created_at,
+        createdAt: approval.created_at,
+        deletedAt: approval.deleted_at,
+        deletedBy: approval.deleted_by
+      }))
+    } else {
+      return JSON.parse(localStorage.getItem('deletedApprovals')) || []
+    }
+  }
+
+  // 삭제된 결재 저장
+  async saveDeletedApproval(approval) {
+    if (this.storageType === 'supabase' && this.supabase) {
+      const supabaseData = {
+        id: approval.id,
+        approval_number: approval.approvalNumber,
+        title: approval.title,
+        site_id: approval.siteId,
+        site_name: approval.siteName,
+        author: approval.author,
+        content: approval.content,
+        attachment_file_name: approval.attachmentFileName || null,
+        attachment_data: approval.attachmentData || null,
+        status: approval.status,
+        current_step: approval.currentStep,
+        total_steps: approval.totalSteps,
+        approvers: approval.approvers || [],
+        approvals: approval.approvals || [],
+        rejected_at: approval.rejectedAt || null,
+        rejection_reason: approval.rejectionReason || null,
+        updated_at: approval.updatedAt || null,
+        original_created_at: approval.originalCreatedAt || approval.createdAt,
+        created_at: approval.createdAt,
+        deleted_at: approval.deletedAt || new Date().toISOString(),
+        deleted_by: approval.deletedBy || null
+      }
+
+      const { data, error } = await this.supabase
+        .from('deleted_approvals')
+        .insert([supabaseData])
+        .select()
+      
+      if (error) {
+        console.error('Supabase 삭제된 결재 저장 오류:', error)
+        return null
+      }
+      return data[0]
+    } else {
+      const deletedApprovals = JSON.parse(localStorage.getItem('deletedApprovals')) || []
+      deletedApprovals.push(approval)
+      localStorage.setItem('deletedApprovals', JSON.stringify(deletedApprovals))
+      return approval
     }
   }
 

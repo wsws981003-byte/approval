@@ -186,8 +186,8 @@ function ApprovalRow({ approval, currentUser, approvedUsers, onViewDetail, onAct
 
   const canDelete = () => {
     if (!currentUser) return false
-    // 대표님 계정만 삭제 가능
-    if (currentUser.role === 'ceo') return true
+    // 대표님 계정과 본사 계정은 삭제 가능
+    if (currentUser.role === 'ceo' || currentUser.role === 'headquarters') return true
     return approval.author === currentUser.username && 
            (approval.status === 'pending' || approval.status === 'processing')
   }

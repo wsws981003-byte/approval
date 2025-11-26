@@ -110,11 +110,13 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
   }
 
   const handleDelete = async () => {
-    if (!window.confirm(`결재 번호 ${approval.approvalNumber || approval.id} (${approval.title})를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) return
+    if (!window.confirm(`결재 번호 ${approval.approvalNumber || approval.id} (${approval.title})를 삭제하시겠습니까?\n\n삭제된 결재는 삭제된 결재 목록에서 확인할 수 있습니다.`)) return
 
     setLoading(true)
     try {
-      await dataService.deleteApproval(approval.id)
+      const user = approvedUsers.find(u => u.username === currentUser.username)
+      const deletedBy = user?.name || currentUser.username
+      await dataService.deleteApproval(approval.id, deletedBy)
       await syncData()
       if (onActionComplete) onActionComplete()
       alert('결재가 삭제되었습니다.')

@@ -7,6 +7,7 @@ import Sites from './components/Sites/Sites'
 import NewApproval from './components/Approvals/NewApproval'
 import ApprovalsList from './components/Approvals/ApprovalsList'
 import PendingApprovals from './components/Approvals/PendingApprovals'
+import DeletedApprovals from './components/Approvals/DeletedApprovals'
 import DateQuery from './components/DateQuery/DateQuery'
 import UserRequests from './components/Users/UserRequests'
 import BackupViewer from './components/Backup/BackupViewer'
@@ -46,6 +47,7 @@ function AppRoutes() {
         <Route path="/new-approval" element={<NewApproval />} />
         <Route path="/approvals" element={<ApprovalsList />} />
         <Route path="/pending" element={<PendingApprovals />} />
+        <Route path="/deleted-approvals" element={<DeletedApprovals />} />
         <Route path="/date-query" element={<DateQuery />} />
         <Route path="/user-requests" element={<UserRequests />} />
         <Route path="/backup-viewer" element={<BackupViewer />} />
