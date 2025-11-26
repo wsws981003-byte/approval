@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import './utils/alert' // 커스텀 alert 초기화
 
 // GitHub Pages 404 처리: 리다이렉트된 경우 원래 경로로 복원
 if (sessionStorage.redirect) {
