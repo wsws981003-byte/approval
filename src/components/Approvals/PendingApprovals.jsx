@@ -113,6 +113,35 @@ function PendingApprovalRow({ approval, currentUser, approvedUsers, onViewDetail
            (approval.status === 'pending' || approval.status === 'processing')
   }
 
+  // 승인 취소 권한 체크
+  const canCancelApproval = () => {
+    if (!currentUser) return false
+    if (approval.status !== 'approved' && approval.status !== 'processing') return false
+    if (currentUser.role !== 'ceo' && currentUser.role !== 'headquarters') return false
+    if (!approval.approvals || !Array.isArray(approval.approvals)) return false
+    
+    // 본사 계정은 0단계(본사 단계)에 승인이 있으면 취소 가능
+    if (currentUser.role === 'headquarters') {
+      const step0Approval = approval.approvals[0]
+      return step0Approval && step0Approval.status === 'approved'
+    }
+    
+    // 대표님 계정은 1단계(대표님 단계)에 승인이 있으면 취소 가능
+    if (currentUser.role === 'ceo') {
+      const step1Approval = approval.approvals[1]
+      if (step1Approval && step1Approval.status === 'approved') {
+        return true
+      }
+      // 대표님이 본사 단계를 건너뛰고 승인한 경우도 취소 가능
+      const step0Approval = approval.approvals[0]
+      if (step0Approval && step0Approval.status === 'approved' && step0Approval.skipped) {
+        return true
+      }
+    }
+    
+    return false
+  }
+
   const approvalNumber = approval.approvalNumber || approval.id
   const currentStepInfo = `${approval.currentStep + 1}/${approval.totalSteps} (${approval.approvers[approval.currentStep] || '미지정'})`
 
@@ -131,6 +160,7 @@ function PendingApprovalRow({ approval, currentUser, approvedUsers, onViewDetail
           canEdit={canEdit()}
           canDelete={canDelete()}
           canCancelRejection={false}
+          canCancelApproval={canCancelApproval()}
           onViewDetail={onViewDetail}
           onActionComplete={onActionComplete}
         />

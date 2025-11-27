@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext'
 import { dataService } from '../../services/dataService'
 import EditApprovalModal from './EditApprovalModal'
 
-export default function ApprovalActions({ approval, showActions, canEdit, canDelete, canCancelRejection, onViewDetail, onActionComplete }) {
+export default function ApprovalActions({ approval, showActions, canEdit, canDelete, canCancelRejection, canCancelApproval, onViewDetail, onActionComplete }) {
   const { currentUser, approvedUsers, syncData } = useApp()
   const [loading, setLoading] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -174,6 +174,92 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
     }
   }
 
+  const handleCancelApproval = async () => {
+    // 현재 사용자가 승인한 단계 찾기
+    const user = approvedUsers.find(u => u.username === currentUser.username)
+    const userName = user?.name || currentUser.username
+    
+    let cancelStep = -1
+    let stepName = ''
+    
+    // 본사 계정은 0단계(본사 단계)를 취소
+    if (currentUser.role === 'headquarters') {
+      const step0Approval = approval.approvals[0]
+      if (step0Approval && step0Approval.status === 'approved') {
+        cancelStep = 0
+        stepName = '1단계(본사)'
+      }
+    }
+    
+    // 대표님 계정은 1단계(대표님 단계)를 취소, 없으면 0단계 확인
+    if (currentUser.role === 'ceo') {
+      const step1Approval = approval.approvals[1]
+      if (step1Approval && step1Approval.status === 'approved') {
+        cancelStep = 1
+        stepName = '2단계(대표님)'
+      } else {
+        // 대표님이 본사 단계를 건너뛰고 승인한 경우
+        const step0Approval = approval.approvals[0]
+        if (step0Approval && step0Approval.status === 'approved' && step0Approval.skipped) {
+          cancelStep = 0
+          stepName = '1단계(본사)'
+        }
+      }
+    }
+
+    if (cancelStep === -1) {
+      alert('취소할 승인이 없습니다.')
+      return
+    }
+
+    if (!window.confirm(`${stepName} 승인을 취소하고 이전 단계로 되돌리시겠습니까?`)) return
+
+    setLoading(true)
+    try {
+      // 승인 단계 제거
+      const newApprovals = [...approval.approvals]
+      newApprovals[cancelStep] = null
+
+      // currentStep을 취소된 단계로 설정 (다시 승인을 받을 수 있도록)
+      const newCurrentStep = cancelStep
+
+      // 상태 업데이트
+      // 취소된 단계가 0단계이고 승인된 단계가 없으면 pending, 아니면 processing
+      let newStatus = 'processing'
+      const hasAnyApproval = newApprovals.some(app => app && app.status === 'approved')
+      if (newCurrentStep === 0 && !hasAnyApproval) {
+        newStatus = 'pending'
+      }
+
+      const updates = {
+        currentStep: newCurrentStep,
+        status: newStatus,
+        approvals: newApprovals
+      }
+
+      await dataService.updateApproval(approval.id, updates)
+
+      // 승인 취소 알림 생성
+      await dataService.saveNotification({
+        type: 'approval_cancelled',
+        title: '결재 승인 취소',
+        message: `"${approval.title}" 결재의 ${stepName} 승인이 취소되었습니다.`,
+        approvalId: approval.id,
+        userId: approval.author,
+        read: false
+      })
+
+      await syncData()
+      if (onActionComplete) onActionComplete()
+      alert('승인이 취소되었습니다.')
+    } catch (error) {
+      console.error('승인 취소 오류:', error)
+      alert('승인 취소 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
       <button
@@ -231,6 +317,20 @@ export default function ApprovalActions({ approval, showActions, canEdit, canDel
         >
           반려 취소
         </button>
+      )}
+      {canCancelApproval ? (
+        <button
+          className="btn btn-warning"
+          onClick={handleCancelApproval}
+          disabled={loading}
+          style={{ padding: '8px 15px', fontSize: '14px', background: '#ffc107', color: '#000', border: '1px solid #ffc107', fontWeight: 'bold' }}
+        >
+          ⚠️ 승인 취소
+        </button>
+      ) : (
+        <div style={{ fontSize: '10px', color: '#999', padding: '5px' }}>
+          canCancelApproval: {String(canCancelApproval)}
+        </div>
       )}
 
       {showEditModal && (

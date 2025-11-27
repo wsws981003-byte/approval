@@ -353,6 +353,96 @@ function ApprovalRow({ approval, currentUser, approvedUsers, showDeletedInfo, on
                             currentUser && 
                             currentUser.role === 'ceo' &&
                             !isDeleted
+  
+  // 승인 취소 권한 체크
+  const canCancelApproval = () => {
+    console.log('=== ApprovalsList 승인 취소 권한 체크 ===')
+    console.log('approval:', approval)
+    console.log('currentUser:', currentUser)
+    console.log('isDeleted:', isDeleted)
+    
+    if (isDeleted || !currentUser) {
+      console.log('❌ 삭제됨 또는 사용자 없음')
+      return false
+    }
+    
+    console.log('결재 상태:', approval.status)
+    if (approval.status !== 'approved' && approval.status !== 'processing') {
+      console.log('❌ 상태가 approved 또는 processing이 아님')
+      return false
+    }
+    
+    console.log('사용자 역할:', currentUser.role)
+    if (currentUser.role !== 'ceo' && currentUser.role !== 'headquarters') {
+      console.log('❌ 권한 없음')
+      return false
+    }
+    
+    console.log('approval.approvals:', approval.approvals)
+    if (!approval.approvals || !Array.isArray(approval.approvals)) {
+      console.log('❌ approvals 배열 없음')
+      return false
+    }
+    
+    // 본사 계정은 0단계(본사 단계)에 승인이 있으면 취소 가능
+    if (currentUser.role === 'headquarters') {
+      // 승인 완료된 결재면 본사는 항상 취소 가능 (더 간단하게)
+      if (approval.status === 'approved') {
+        console.log('✅ 본사 계정 - 승인 완료된 결재, 취소 가능')
+        return true
+      }
+      // 진행 중인 결재에서 0단계 승인이 있으면 취소 가능
+      const step0Approval = approval.approvals[0]
+      console.log('본사 계정 - 0단계 승인:', step0Approval)
+      if (step0Approval && step0Approval.status === 'approved') {
+        console.log('✅ 본사 계정 - 0단계 승인 있음, 취소 가능')
+        return true
+      }
+      // 본사는 승인된 단계가 하나라도 있으면 취소 가능
+      const hasAnyApproval = approval.approvals.some((app, idx) => {
+        return app && app.status === 'approved'
+      })
+      if (hasAnyApproval) {
+        console.log('✅ 본사 계정 - 승인 취소 가능 (어떤 단계든 승인됨)')
+        return true
+      }
+      console.log('❌ 본사 계정 - 승인된 단계 없음')
+    }
+    
+    // 대표님 계정은 1단계(대표님 단계)에 승인이 있으면 취소 가능
+    if (currentUser.role === 'ceo') {
+      // 승인 완료된 결재면 대표님은 항상 취소 가능 (더 간단하게)
+      if (approval.status === 'approved') {
+        console.log('✅ 대표님 계정 - 승인 완료된 결재, 취소 가능')
+        return true
+      }
+      const step1Approval = approval.approvals[1]
+      console.log('대표님 계정 - 1단계 승인:', step1Approval)
+      if (step1Approval && step1Approval.status === 'approved') {
+        console.log('✅ 대표님 계정 - 승인 취소 가능 (1단계)')
+        return true
+      }
+      // 대표님이 본사 단계를 건너뛰고 승인한 경우도 취소 가능
+      const step0Approval = approval.approvals[0]
+      console.log('대표님 계정 - 0단계 승인:', step0Approval)
+      if (step0Approval && step0Approval.status === 'approved') {
+        console.log('✅ 대표님 계정 - 승인 취소 가능 (0단계)')
+        return true
+      }
+      // 대표님은 승인된 단계가 하나라도 있으면 취소 가능
+      const hasAnyApproval = approval.approvals.some((app, idx) => {
+        return app && app.status === 'approved'
+      })
+      if (hasAnyApproval) {
+        console.log('✅ 대표님 계정 - 승인 취소 가능 (어떤 단계든 승인됨)')
+        return true
+      }
+      console.log('❌ 대표님 계정 - 승인된 단계 없음')
+    }
+    
+    console.log('❌ 최종: 승인 취소 불가')
+    return false
+  }
 
   return (
     <tr style={{ opacity: isDeleted ? 0.7 : 1 }}>
@@ -391,6 +481,7 @@ function ApprovalRow({ approval, currentUser, approvedUsers, showDeletedInfo, on
             canEdit={canEdit()}
             canDelete={canDelete()}
             canCancelRejection={canCancelRejection}
+            canCancelApproval={canCancelApproval()}
             onViewDetail={onViewDetail}
             onActionComplete={onActionComplete}
           />

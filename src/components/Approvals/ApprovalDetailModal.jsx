@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import { dataService } from '../../services/dataService'
 import { getStatusClass, getStatusText, formatDate } from '../../utils'
+import ApprovalActions from './ApprovalActions'
 
-export default function ApprovalDetailModal({ approvalId, approval: approvalProp, onClose }) {
-  const { approvals, sites } = useApp()
+export default function ApprovalDetailModal({ approvalId, approval: approvalProp, onClose, onActionComplete }) {
+  const { approvals, sites, currentUser, approvedUsers, syncData } = useApp()
   const [approval, setApproval] = useState(approvalProp || null)
 
   useEffect(() => {
@@ -83,6 +84,112 @@ export default function ApprovalDetailModal({ approvalId, approval: approvalProp
   }
 
   const approvalNumber = approval.approvalNumber || approval.id
+
+  // 승인 취소 권한 체크
+  const canCancelApproval = () => {
+    console.log('=== 승인 취소 권한 체크 시작 ===')
+    console.log('approval:', approval)
+    console.log('currentUser:', currentUser)
+    
+    // 삭제된 결재는 불가
+    if (approval.deletedAt) {
+      console.log('❌ 삭제된 결재')
+      return false
+    }
+    
+    // 현재 사용자 확인
+    if (!currentUser) {
+      console.log('❌ currentUser 없음')
+      return false
+    }
+    
+    console.log('사용자 역할:', currentUser.role)
+    
+    // 대표님 또는 본사 계정만 승인 취소 가능
+    if (currentUser.role !== 'ceo' && currentUser.role !== 'headquarters') {
+      console.log('❌ 권한 없음 (ceo 또는 headquarters만 가능)')
+      return false
+    }
+    
+    console.log('결재 상태:', approval.status)
+    
+    // 승인된 결재이거나 진행 중인 결재에서만 승인 취소 가능
+    if (approval.status !== 'approved' && approval.status !== 'processing') {
+      console.log('❌ 상태가 approved 또는 processing이 아님')
+      return false
+    }
+    
+    console.log('approval.approvals:', approval.approvals)
+    
+    // 승인된 단계가 있어야 함
+    if (!approval.approvals || !Array.isArray(approval.approvals)) {
+      console.log('❌ approvals 배열이 없음')
+      return false
+    }
+    
+    // 본사 계정은 0단계(본사 단계)에 승인이 있으면 취소 가능
+    if (currentUser.role === 'headquarters') {
+      const step0Approval = approval.approvals[0]
+      console.log('본사 계정 - 0단계 승인:', step0Approval)
+      if (step0Approval && step0Approval.status === 'approved') {
+        console.log('✅ 본사 계정 - 승인 취소 가능')
+        return true
+      }
+      console.log('❌ 본사 계정 - 0단계 승인 없음')
+    }
+    
+    // 대표님 계정은 1단계(대표님 단계)에 승인이 있으면 취소 가능
+    if (currentUser.role === 'ceo') {
+      const step1Approval = approval.approvals[1]
+      console.log('대표님 계정 - 1단계 승인:', step1Approval)
+      if (step1Approval && step1Approval.status === 'approved') {
+        console.log('✅ 대표님 계정 - 승인 취소 가능 (1단계)')
+        return true
+      }
+      // 대표님이 본사 단계를 건너뛰고 승인한 경우도 취소 가능
+      const step0Approval = approval.approvals[0]
+      console.log('대표님 계정 - 0단계 승인:', step0Approval)
+      if (step0Approval) {
+        if (step0Approval.status === 'approved') {
+          console.log('✅ 대표님 계정 - 승인 취소 가능 (0단계 승인됨)')
+          return true
+        }
+      }
+      // 대표님은 승인된 단계가 하나라도 있으면 취소 가능 (더 관대하게)
+      const hasAnyApproval = approval.approvals.some((app, idx) => {
+        return app && app.status === 'approved'
+      })
+      if (hasAnyApproval) {
+        console.log('✅ 대표님 계정 - 승인 취소 가능 (어떤 단계든 승인됨)')
+        return true
+      }
+      console.log('❌ 대표님 계정 - 승인된 단계 없음')
+    }
+    
+    console.log('❌ 최종: 승인 취소 불가')
+    return false
+  }
+
+  const handleActionComplete = async () => {
+    // 결재 데이터 다시 로드
+    if (approvalId) {
+      const found = approvals.find(a => a.id === approvalId)
+      if (found) {
+        setApproval(found)
+      } else {
+        const deletedApprovals = await dataService.getDeletedApprovals()
+        const deleted = deletedApprovals.find(a => a.id === approvalId)
+        if (deleted) {
+          setApproval(deleted)
+        }
+      }
+    }
+    if (onActionComplete) {
+      onActionComplete()
+    } else {
+      await syncData()
+    }
+  }
 
   return (
     <div className="modal active" style={{ display: 'flex' }} onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -173,6 +280,30 @@ export default function ApprovalDetailModal({ approvalId, approval: approvalProp
           {approval.rejectionReason && (
             <div style={{ marginTop: '20px', padding: '15px', background: '#fff3cd', borderRadius: '8px' }}>
               <strong>반려 사유:</strong> {approval.rejectionReason}
+            </div>
+          )}
+
+          {!approval.deletedAt && (
+            <div style={{ marginTop: '20px', padding: '15px', borderTop: '1px solid #ddd' }}>
+              {/* 디버깅 정보 - 항상 표시 */}
+              <div style={{ marginBottom: '10px', padding: '10px', background: '#f0f0f0', fontSize: '12px', borderRadius: '4px' }}>
+                <strong>디버깅 정보:</strong><br/>
+                상태: {approval.status}<br/>
+                사용자 역할: {currentUser?.role || '없음'}<br/>
+                승인 배열: {JSON.stringify(approval.approvals, null, 2)}<br/>
+                승인 취소 가능: {canCancelApproval() ? '✅ 예' : '❌ 아니오'}<br/>
+                canCancelApproval 값: {String(canCancelApproval())}
+              </div>
+              <ApprovalActions
+                approval={approval}
+                showActions={false}
+                canEdit={false}
+                canDelete={false}
+                canCancelRejection={false}
+                canCancelApproval={canCancelApproval()}
+                onViewDetail={onClose}
+                onActionComplete={handleActionComplete}
+              />
             </div>
           )}
         </div>
